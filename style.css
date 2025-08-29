@@ -34,3 +34,20 @@ h1, h2 {
   font-style: italic;
   color: #0066cc;
 }
+
+.videos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.video-card {
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.comments {
+  margin-top: 10px;
+}
