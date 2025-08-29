@@ -46,6 +46,23 @@ export default function VideoUpload() {
     }
   };
 
+  const { error: dbError } = await supabase.from("videos").insert([
+  {
+    title,
+    video_url: videoUrl,
+    user_id: user.id, // important
+  },
+]);
+
+if (dbError) {
+  console.error("DB insert error details:", dbError);
+  setError(dbError.message);
+} else {
+  console.log("DB insert success!");
+  setSuccess("Video uploaded successfully!");
+}
+
+
   return (
     <div className="upload-container">
       <h2>Upload a Video</h2>
