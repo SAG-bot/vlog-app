@@ -7,44 +7,60 @@ export default function VideoUpload({ user }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      setError("Please select a file");
-      return;
-    }
+ const handleUpload = async (e) => {
+  e.preventDefault();
+  setError("");
+  setSuccess("");
 
-    // Upload video to Supabase Storage
-    const filePath = `${user.id}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("videos") // make sure you created a bucket called 'videos'
-      .upload(filePath, file);
+  console.log("Upload started...");
 
-    if (uploadError) {
-      setError(uploadError.message);
-      return;
-    }
+  if (!file) {
+    setError("Please select a file");
+    return;
+  }
 
-    // Get public URL
-    const { data } = supabase.storage.from("videos").getPublicUrl(filePath);
-    const videoUrl = data.publicUrl;
+  if (!user) {
+    setError("No user logged in");
+    return;
+  }
 
-    // Insert record into videos table
-    const { error: dbError } = await supabase.from("videos").insert([
-      {
-        title,
-        video_url: videoUrl,
-        user_id: user.id,
-      },
-    ]);
+  console.log("User ID:", user.id);
 
-    if (dbError) {
-      setError(dbError.message);
-    } else {
-      setSuccess("Video uploaded successfully!");
-      setTitle("");
-      setFile(null);
-    }
+  const filePath = `${user.id}/${Date.now()}-${file.name}`;
+  console.log("Uploading file to:", filePath);
+
+  const { error: uploadError } = await supabase.storage
+    .from("videos")
+    .upload(filePath, file);
+
+  if (uploadError) {
+    console.error("Storage upload error:", uploadError.message);
+    setError(uploadError.message);
+    return;
+  }
+
+  const { data } = supabase.storage.from("videos").getPublicUrl(filePath);
+  const videoUrl = data.publicUrl;
+
+  const { error: dbError } = await supabase.from("videos").insert([
+    {
+      title,
+      video_url: videoUrl,
+      user_id: user.id,
+    },
+  ]);
+
+  if (dbError) {
+    console.error("DB insert error:", dbError.message);
+    setError(dbError.message);
+  } else {
+    console.log("Upload successful!");
+    setSuccess("Video uploaded successfully!");
+    setTitle("");
+    setFile(null);
+  }
+};
+
   };
 
   return (
