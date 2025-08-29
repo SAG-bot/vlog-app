@@ -1,35 +1,24 @@
-import { useEffect, useState } from "react";
-import supabase from "./supabaseClient";
-import Auth from "./components/Auth";
+import { useState } from "react";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
-import Affirmations from "./components/Affirmations";
 
 function App() {
-  const [session, setSession] = useState(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  if (!session) return <Auth />;
+  const [view, setView] = useState("list"); // default to "My Videos"
 
   return (
-    <div>
-      <header>
-        <h1>Her Vlog Sanctuary</h1>
-        <Affirmations />
-      </header>
-      <VideoUpload />
-      <VideoList />
+    <div className="container">
+      <nav className="navbar">
+        <h1>My Vlog</h1>
+        <div className="nav-buttons">
+          <button onClick={() => setView("upload")}>Upload Video</button>
+          <button onClick={() => setView("list")}>My Videos</button>
+        </div>
+      </nav>
+
+      <main>
+        {view === "upload" && <VideoUpload />}
+        {view === "list" && <VideoList />}
+      </main>
     </div>
   );
 }
