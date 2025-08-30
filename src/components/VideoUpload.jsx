@@ -1,64 +1,54 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const VideoUpload = ({ user }) => {
+const VideoUpload = ({ user, onUpload }) => {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
-  const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file || !title) {
-      setMessage("Please provide a title and file.");
-      return;
-    }
+    if (!file) return alert("Please select a file");
 
     try {
-      // 1️⃣ Upload file to Supabase storage
+      setUploading(true);
+
+      // upload to storage
       const filePath = `public/${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from("videos")
         .upload(filePath, file);
 
-      if (uploadError) {
-        setMessage("Upload failed.");
-        return;
-      }
+      if (error) throw error;
 
-      // 2️⃣ Get public URL for playback
-      const { data: publicUrlData } = supabase
-        .storage
+      const { data: urlData } = supabase.storage
         .from("videos")
         .getPublicUrl(filePath);
 
-      const videoUrl = publicUrlData.publicUrl;
-
-      // 3️⃣ Insert video record into database
+      // insert into DB
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
-          video_url: videoUrl,
+          video_url: urlData.publicUrl,
           user_id: user.id,
         },
       ]);
 
-      if (dbError) {
-        setMessage("Database insert failed.");
-        return;
-      }
+      if (dbError) throw dbError;
 
-      setMessage("Upload successful!");
       setTitle("");
       setFile(null);
+      if (onUpload) onUpload();
     } catch (err) {
-      setMessage("Unexpected error.");
-      console.error(err);
+      console.error(err.message);
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <form onSubmit={handleUpload} className="video-upload">
-      <h2>Upload Video</h2>
+    <form onSubmit={handleUpload} className="upload-form">
       <input
         type="text"
         placeholder="Video title"
@@ -66,8 +56,9 @@ const VideoUpload = ({ user }) => {
         onChange={(e) => setTitle(e.target.value)}
       />
       <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} />
-      <button type="submit">Upload</button>
-      {message && <p>{message}</p>}
+      <button type="submit" disabled={uploading}>
+        {uploading ? "⏳ Uploading..." : "⬆ Upload Video"}
+      </button>
     </form>
   );
 };
