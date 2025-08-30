@@ -1,53 +1,47 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
 
-const affirmations = [
-  "You are amazing 💖",
-  "Keep shining 🌟",
-  "Your energy is beautiful ✨",
-  "You make the world brighter 🌸",
-  "Believe in yourself 🌈"
-];
-
-function App() {
-  const [user, setUser] = useState(null);
-  const [affirmation, setAffirmation] = useState("");
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Pick a random affirmation
-    setAffirmation(affirmations[Math.floor(Math.random() * affirmations.length)]);
+    // Get session on load
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setLoading(false);
+    };
+    getSession();
 
-    // Supabase auth listener
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
-    });
-
+    // Listen for changes (login/logout)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      setSession(session);
     });
 
-    return () => listener?.subscription.unsubscribe();
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
+  if (loading) return <div className="loading">Loading...</div>;
+
+  if (!session) {
+    return (
+      <div className="app-container">
+        <Login />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="affirmations">{affirmation}</div>
-      <div className="app-container">
-        <h1>Welcome, {user.email}</h1>
-        <button onClick={() => supabase.auth.signOut()}>Logout</button>
-
-        <VideoUpload user={user} />
-        <VideoList user={user} />
-      </div>
+    <div className="app-container">
+      <header>💜 You are loved 💜</header>
+      <VideoUpload user={session.user} />
+      <VideoList user={session.user} />
     </div>
   );
 }
-
-export default App;
