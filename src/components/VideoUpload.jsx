@@ -63,7 +63,14 @@ export default function VideoUpload({ user }) {
           onChange={(e) => setFile(e.target.files[0])}
           required
         />
-        <button type="submit">Upload</button>
+        <button
+  type="submit"
+  className="upload-btn"
+  disabled={uploading}
+>
+  {uploading ? "Uploading..." : "Upload"}
+</button>
+
       </form>
     </div>
   );
