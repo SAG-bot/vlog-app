@@ -103,3 +103,34 @@ body {
   border-radius: 8px;
   margin-bottom: 5px;
 }
+
+.upload-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ff6b6b, #f94d6a);
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  max-width: 250px;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.upload-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+@media (max-width: 600px) {
+  .upload-btn {
+    font-size: 0.9rem;
+    padding: 10px 16px;
+  }
+}
+
