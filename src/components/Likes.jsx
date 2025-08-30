@@ -1,48 +1,33 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function Likes({ videoId, user }) {
-  const [likes, setLikes] = useState(0);
+const Likes = ({ videoId, user }) => {
+  const [count, setCount] = useState(0);
   const [liked, setLiked] = useState(false);
+
+  const fetchLikes = async () => {
+    const { data, error } = await supabase.from("likes").select("*").eq("video_id", videoId);
+    if (!error) {
+      setCount(data.length);
+      setLiked(data.some((l) => l.user_id === user.id));
+    }
+  };
+
+  const toggleLike = async () => {
+    if (liked) return; // only allow once
+    await supabase.from("likes").insert([{ video_id: videoId, user_id: user.id }]);
+    fetchLikes();
+  };
 
   useEffect(() => {
     fetchLikes();
   }, []);
 
-  const fetchLikes = async () => {
-    const { count } = await supabase
-      .from("likes")
-      .select("*", { count: "exact", head: true })
-      .eq("video_id", videoId);
-
-    setLikes(count);
-
-    const { data } = await supabase
-      .from("likes")
-      .select("id")
-      .eq("video_id", videoId)
-      .eq("user_id", user.id)
-      .single();
-
-    setLiked(!!data);
-  };
-
-  const toggleLike = async () => {
-    if (liked) {
-      await supabase.from("likes").delete().eq("video_id", videoId).eq("user_id", user.id);
-      setLikes(likes - 1);
-    } else {
-      await supabase.from("likes").insert([{ video_id: videoId, user_id: user.id }]);
-      setLikes(likes + 1);
-    }
-    setLiked(!liked);
-  };
-
   return (
     <button className="like-btn" onClick={toggleLike}>
-      ❤️ {likes}
+      ❤️ {count}
     </button>
   );
-  <button onClick={() => handleLike(video.id)}>❤️ {video.likes || 0}</button>
+};
 
-}
+export default Likes;
