@@ -1,65 +1,48 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const Login = ({ onLogin }) => {
+export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
-    setLoading(false);
-
     if (error) {
-      alert(error.message);
+      setError(error.message);
     } else {
-      onLogin(data.user); // Pass user back to App.jsx
+      onLogin(data.user);
     }
   };
 
   return (
     <div className="login-page">
-      <div>
-        {/* Affirmations Tile */}
-        <div className="affirmations">
-          🌸 You are loved. <br />
-          🌈 You are enough. <br />
-          ✨ Your creativity shines through everything you do.
-        </div>
-
-        {/* Login Card */}
-        <div className="login-card">
-          <h2>Welcome Back 💖</h2>
-          <form onSubmit={handleLogin}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login ✨"}
-            </button>
-          </form>
-        </div>
+      <div className="tile login-tile">
+        <h2>Welcome Back 💙</h2>
+        <p className="subtitle">Log in to share and view videos</p>
+        <form onSubmit={handleLogin} className="login-form">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit">Log In</button>
+          {error && <p className="error">{error}</p>}
+        </form>
       </div>
     </div>
   );
-};
-
-export default Login;
+}
