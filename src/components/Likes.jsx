@@ -43,4 +43,6 @@ export default function Likes({ videoId, user }) {
       ❤️ {likes}
     </button>
   );
+  <button onClick={() => handleLike(video.id)}>❤️ {video.likes || 0}</button>
+
 }
