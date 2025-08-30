@@ -4,46 +4,44 @@ import { supabase } from "../supabaseClient";
 const VideoUpload = ({ user, onUpload }) => {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return alert("Please select a file");
 
-    try {
-      setUploading(true);
+    setLoading(true);
 
-      // upload to storage
-      const filePath = `public/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from("videos")
-        .upload(filePath, file);
+    const fileName = `${user.id}-${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from("videos")
+      .upload(fileName, file);
 
-      if (error) throw error;
+    if (uploadError) {
+      setLoading(false);
+      return alert("Upload failed: " + uploadError.message);
+    }
 
-      const { data: urlData } = supabase.storage
-        .from("videos")
-        .getPublicUrl(filePath);
+    const { data: urlData } = supabase.storage
+      .from("videos")
+      .getPublicUrl(fileName);
 
-      // insert into DB
-      const { error: dbError } = await supabase.from("videos").insert([
-        {
-          title,
-          video_url: urlData.publicUrl,
-          user_id: user.id,
-        },
-      ]);
+    const { error: dbError } = await supabase.from("videos").insert([
+      {
+        title,
+        video_url: urlData.publicUrl,
+        user_id: user.id,
+      },
+    ]);
 
-      if (dbError) throw dbError;
+    setLoading(false);
 
+    if (dbError) {
+      alert("Database insert failed: " + dbError.message);
+    } else {
       setTitle("");
       setFile(null);
-      if (onUpload) onUpload();
-    } catch (err) {
-      console.error(err.message);
-      alert("Upload failed: " + err.message);
-    } finally {
-      setUploading(false);
+      onUpload();
     }
   };
 
@@ -54,10 +52,11 @@ const VideoUpload = ({ user, onUpload }) => {
         placeholder="Video title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        required
       />
-      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} />
-      <button type="submit" disabled={uploading}>
-        {uploading ? "⏳ Uploading..." : "⬆ Upload Video"}
+      <input type="file" accept="video/mp4" onChange={(e) => setFile(e.target.files[0])} />
+      <button type="submit" disabled={loading}>
+        {loading ? "Uploading..." : "Upload"}
       </button>
     </form>
   );
