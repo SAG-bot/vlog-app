@@ -1,174 +1,161 @@
-/* General Reset */
-body {
-  font-family: "Poppins", sans-serif;
+/* Global resets */
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #a2c2ff, #d1b3ff, #ffb6d9);
+  background-attachment: fixed;
   min-height: 100vh;
-  background: linear-gradient(to bottom right, #a8d8ff, #d0eaff);
-  color: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Affirmations tile */
-.affirmations {
-  margin: 20px;
-  padding: 15px;
-  background: #8e6dfd;
-  color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-  max-width: 600px;
-  text-align: center;
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-/* Login Page */
-.login-page {
+  color: #333;
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 80vh;
+  padding: 20px;
+}
+
+/* General container for centered layout */
+.container {
+  max-width: 1200px;
   width: 100%;
-}
-
-.login-card {
-  background: #8e6dfd;
-  color: #fff;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-}
-
-.login-card h2 {
-  margin-bottom: 20px;
-}
-
-.login-card input {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: none;
-}
-
-.login-card button {
-  width: 100%;
-  background: #ff85c1;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  margin-top: 12px;
-  font-weight: bold;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.login-card button:hover {
-  background: #ff5ea3;
-}
-
-/* Upload form */
-.upload-form {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin: 20px auto;
-  padding: 20px;
-  background: #8e6dfd;
-  color: white;
-  border-radius: 16px;
-  max-width: 400px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+  gap: 20px;
 }
 
-.upload-form input[type="text"],
-.upload-form input[type="file"] {
-  background: #fff;
-  color: #333;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
+/* Tile style (for login, affirmations, videos) */
+.tile {
+  background: #fdfdff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+
+.tile:hover {
+  transform: translateY(-4px);
+}
+
+/* Login page tile */
+.login-tile {
+  max-width: 400px;
+  margin: auto;
+  text-align: center;
+  background: #ffffffcc;
+}
+
+.login-tile h2 {
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  color: #4a3aff;
+}
+
+.login-tile input {
   width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.login-tile button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  background: linear-gradient(90deg, #4a90e2, #a66cff, #ff69b4);
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-tile button:hover {
+  opacity: 0.9;
+}
+
+/* Affirmations */
+.affirmation-tile {
+  text-align: center;
+  background: #f7f3ff;
+  color: #4a3aff;
+  font-size: 1.2rem;
+  font-weight: 500;
 }
 
 /* Video grid */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
-  padding: 20px;
-  width: 100%;
-  max-width: 1200px;
 }
 
-.video-tile {
-  background: #8e6dfd;
-  color: white;
-  border-radius: 16px;
-  padding: 15px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.video-grid .tile {
+  background: #ffffffcc;
 }
 
-.video-tile h3 {
+.video-grid h3 {
   margin-bottom: 10px;
+  color: #4a3aff;
 }
 
-.video-tile video {
+video {
   width: 100%;
   border-radius: 12px;
   margin-bottom: 10px;
 }
 
-/* Buttons */
-button {
-  background: #ff85c1;
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: background 0.3s;
-}
-
-button:hover {
-  background: #ff5ea3;
-}
-
-.delete-btn {
-  background: #ff4d6d;
-}
-
-.like-btn {
-  background: #ff85c1;
-}
-
-/* Comments */
-.comments {
+/* Likes & Comments */
+.likes-section,
+.comments-section {
   margin-top: 10px;
-  width: 100%;
 }
 
-.comments form {
-  display: flex;
-  gap: 6px;
-}
-
-.comments input {
-  flex: 1;
-  padding: 8px;
+.likes-section button,
+.comments-section button,
+.delete-btn {
+  background: linear-gradient(90deg, #4a90e2, #a66cff, #ff69b4);
   border: none;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+  margin-top: 5px;
+  transition: 0.3s;
 }
 
+.likes-section button:hover,
+.comments-section button:hover,
+.delete-btn:hover {
+  opacity: 0.9;
+}
+
+.comments-section input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .login-tile {
+    width: 100%;
+  }
+}
