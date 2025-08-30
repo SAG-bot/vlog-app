@@ -1,89 +1,65 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const affirmations = [
-  "💜 You are loved 💜",
-  "🌸 You make the world brighter 🌸",
-  "💫 I’m proud of you 💫",
-  "🌟 Keep shining 🌟",
-  "💕 You are amazing 💕",
-  "🌈 You inspire me every day 🌈"
-];
-
-export default function Login() {
+const Login = ({ onLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  const [affirmation] = useState(
-    affirmations[Math.floor(Math.random() * affirmations.length)]
-  );
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
+    setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setErrorMsg(error.message);
-    } else {
-      setSuccessMsg("✨ Welcome back! Logging you in...");
-    }
-  };
-
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    setLoading(false);
 
     if (error) {
-      setErrorMsg(error.message);
+      alert(error.message);
     } else {
-      setSuccessMsg("✅ Account created! Check your email to confirm.");
+      onLogin(data.user); // Pass user back to App.jsx
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h1 className="affirmation">{affirmation}</h1>
+    <div className="login-page">
+      <div>
+        {/* Affirmations Tile */}
+        <div className="affirmations">
+          🌸 You are loved. <br />
+          🌈 You are enough. <br />
+          ✨ Your creativity shines through everything you do.
+        </div>
 
-        <form className="login-form" onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
-          <button type="submit" className="login-btn">Login</button>
-          <button type="button" className="signup-btn" onClick={handleSignup}>
-            Sign Up
-          </button>
-        </form>
-
-        {errorMsg && <p className="error">{errorMsg}</p>}
-        {successMsg && <p className="success">{successMsg}</p>}
+        {/* Login Card */}
+        <div className="login-card">
+          <h2>Welcome Back 💖</h2>
+          <form onSubmit={handleLogin}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? "Logging in..." : "Login ✨"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Login;
