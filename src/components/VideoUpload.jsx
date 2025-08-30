@@ -1,67 +1,50 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function VideoUpload() {
+export default function VideoUpload({ user }) {
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
-  const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return alert("Please select a video");
 
-    try {
-      setUploading(true);
+    if (!file) {
+      alert("Please select a file.");
+      return;
+    }
 
-      // 1. Upload file to Supabase Storage
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("videos") // your Supabase storage bucket name
-        .upload(fileName, file);
+    // 1. Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from("videos")
+      .upload(`${user.id}/${Date.now()}-${file.name}`, file);
 
-      if (uploadError) throw uploadError;
+    if (error) {
+      console.error("Storage error:", error.message);
+      alert("Upload failed 😢");
+      return;
+    }
 
-      // 2. Get a public URL for the video
-      const { data } = supabase.storage.from("videos").getPublicUrl(fileName);
-      const publicUrl = data.publicUrl;
+    // 2. Get public video URL
+    const videoUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/videos/${data.path}`;
 
-      // 3. Save metadata into videos table
-      const { error: insertError } = await supabase.from("videos").insert([
-        {
-          title,
-          video_url: publicUrl,
-        },
-      ]);
+    // 3. Insert metadata into Supabase DB
+    const { error: dbError } = await supabase.from("videos").insert([
+      {
+        title,
+        video_url: videoUrl,
+        user_id: user.id,
+      },
+    ]);
 
-      if (insertError) throw insertError;
-
-      alert("Video uploaded successfully!");
+    if (dbError) {
+      console.error("DB error:", dbError.message);
+      alert("Database insert failed 😢");
+    } else {
+      alert("Video uploaded successfully 🎉");
       setFile(null);
       setTitle("");
-    } catch (error) {
-      console.error(error);
-      alert("Error uploading video");
-    } finally {
-      setUploading(false);
     }
   };
-
-  const { error: dbError } = await supabase.from("videos").insert([
-  {
-    title,
-    video_url: videoUrl,
-    user_id: user.id, // important
-  },
-]);
-
-if (dbError) {
-  console.error("DB insert error details:", dbError);
-  setError(dbError.message);
-} else {
-  console.log("DB insert success!");
-  setSuccess("Video uploaded successfully!");
-}
-
 
   return (
     <div className="upload-container">
@@ -69,7 +52,7 @@ if (dbError) {
       <form onSubmit={handleUpload}>
         <input
           type="text"
-          placeholder="Video Title"
+          placeholder="Enter video title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
@@ -80,9 +63,7 @@ if (dbError) {
           onChange={(e) => setFile(e.target.files[0])}
           required
         />
-        <button type="submit" disabled={uploading}>
-          {uploading ? "Uploading..." : "Upload"}
-        </button>
+        <button type="submit">Upload</button>
       </form>
     </div>
   );
