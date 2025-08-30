@@ -1,49 +1,54 @@
-import { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function Comments({ videoId, user }) {
+const Comments = ({ videoId, user }) => {
   const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-
-  useEffect(() => {
-    fetchComments();
-  }, []);
+  const [text, setText] = useState("");
 
   const fetchComments = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("comments")
-      .select("id, content, user_id, created_at")
+      .select("*")
       .eq("video_id", videoId)
-      .order("created_at", { ascending: false });
-    setComments(data);
+      .order("created_at", { ascending: true });
+    if (!error) setComments(data);
   };
 
   const addComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!text) return;
 
     await supabase.from("comments").insert([
-      { video_id: videoId, user_id: user.id, content: newComment }
+      {
+        video_id: videoId,
+        user_id: user.id,
+        content: text,
+      },
     ]);
-
-    setNewComment("");
+    setText("");
     fetchComments();
   };
+
+  useEffect(() => {
+    fetchComments();
+  }, []);
 
   return (
     <div className="comments">
       <form onSubmit={addComment}>
         <input
           type="text"
-          placeholder="Write a comment..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Add a comment..."
+          value={text}
+          onChange={(e) => setText(e.target.value)}
         />
-        <button type="submit" className="comment-btn">Post</button>
+        <button type="submit">Post</button>
       </form>
       {comments.map((c) => (
-        <div key={c.id} className="comment">{c.content}</div>
+        <p key={c.id}>{c.content}</p>
       ))}
     </div>
   );
-}
+};
+
+export default Comments;
