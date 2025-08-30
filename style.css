@@ -1,104 +1,85 @@
-/* General Layout */
 body {
-  margin: 0;
   font-family: "Poppins", sans-serif;
-  background: linear-gradient(135deg, #a2d2ff, #fbc4ff, #c8b6ff);
-  color: #333;
+  background: linear-gradient(to bottom right, #a8c0ff, #fbc2eb, #d1c4e9);
+  color: #222;
+  margin: 0;
+  padding: 0;
   min-height: 100vh;
 }
 
-/* Center content */
-.app-container {
-  max-width: 900px;
-  margin: auto;
-  padding: 20px;
+h1, h2, h3 {
+  color: #3b3b98;
+  text-align: center;
 }
 
-/* Upload Form */
+button {
+  background: #6c63ff;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #5a54d1;
+}
+
 .upload-form {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 25px;
-}
-.upload-form input,
-.upload-form button {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-}
-.upload-form button {
-  background: linear-gradient(90deg, #89cff0, #f8a1d1, #cda7f7);
-  color: white;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.upload-form button:hover {
-  transform: scale(1.05);
+  margin: 20px auto;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  max-width: 400px;
 }
 
-/* Video Grid */
-.video-list h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
-}
-.video-tile {
-  background: white;
-  padding: 15px;
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  text-align: center;
-}
-.video-player {
-  width: 100%;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
-.video-actions {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-.like-btn,
-.delete-btn {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-}
-.like-btn {
-  background: #f8a1d1;
-  color: white;
-}
-.like-btn:hover {
-  background: #f07aa9;
-}
-.delete-btn {
-  background: #ff6b6b;
-  color: white;
-}
-.delete-btn:hover {
-  background: #e63946;
+  padding: 20px;
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 600px) {
-  .app-container {
-    padding: 10px;
-  }
-  .upload-form input,
-  .upload-form button {
-    font-size: 14px;
-    padding: 10px;
-  }
-  .video-tile {
-    padding: 10px;
-  }
+.video-tile {
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.video-tile video {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.delete-btn {
+  background: #ff4d6d;
+  margin-top: 10px;
+}
+
+.like-btn {
+  background: #ff85c1;
+  margin-top: 10px;
+}
+
+.comments {
+  margin-top: 10px;
+}
+
+.comments form {
+  display: flex;
+  gap: 6px;
+}
+
+.comments input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
 }
