@@ -1,53 +1,105 @@
+/* Soft pastel theme */
 body {
-  font-family: Arial, sans-serif;
-  background-color: #e6f0ff;
+  font-family: 'Poppins', sans-serif;
   margin: 0;
   padding: 0;
+  background: #fff5f8;
+  color: #333;
+}
+
+/* Affirmations bar */
+.affirmations {
+  background: linear-gradient(90deg, #ff9a9e, #fad0c4);
+  color: #fff;
   text-align: center;
+  padding: 12px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border-bottom: 2px solid #f8d7da;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-h1, h2 {
-  color: #003366;
-}
-
-.vlog-box {
-  background: #fff;
-  border-radius: 10px;
+/* Container */
+.app-container {
+  max-width: 1000px;
+  margin: auto;
   padding: 20px;
-  margin: 20px auto;
-  width: 300px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.add-post {
-  background: #0055cc;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin: 5px;
+/* Upload Section */
+.upload-container {
+  background: #fff;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-#affirmation {
-  margin-top: 10px;
-  font-style: italic;
-  color: #0066cc;
+.upload-container input,
+.upload-container button {
+  display: block;
+  margin: 10px 0;
+  padding: 10px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #ddd;
 }
 
-.videos-grid {
+/* Video grid */
+.video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
 }
 
+/* Video card */
 .video-card {
   background: #fff;
+  border-radius: 16px;
   padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
 }
 
+.video-card:hover {
+  transform: translateY(-5px);
+}
+
+.video-card video {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.video-actions {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.like-btn, .comment-btn {
+  cursor: pointer;
+  background: #ffb6c1;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: #fff;
+  transition: background 0.3s;
+}
+
+.like-btn:hover, .comment-btn:hover {
+  background: #ff8fa3;
+}
+
+/* Comments */
 .comments {
   margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.comment {
+  background: #fce4ec;
+  padding: 8px;
+  border-radius: 8px;
+  margin-bottom: 5px;
 }
