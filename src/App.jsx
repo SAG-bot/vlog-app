@@ -1,75 +1,86 @@
-// src/App.jsx
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
 
-const affirmations = [
-  "💜 You are loved 💜",
-  "🌸 You make the world brighter 🌸",
-  "💫 I’m proud of you 💫",
-  "🌟 Keep shining 🌟",
-  "💕 You are amazing 💕",
-  "🌈 You inspire me every day 🌈"
-];
-
 export default function App() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [affirmation, setAffirmation] = useState("");
+  const [user, setUser] = useState(null);
+  const [idx, setIdx] = useState(0);
 
+  // 20 calm, elegant affirmations
+  const affirmations = useMemo(
+    () => [
+      "You are deeply loved and endlessly worthy.",
+      "Your presence brings warmth and light to every room.",
+      "You create beauty in small, thoughtful ways every day.",
+      "You are allowed to take up space and be heard.",
+      "Your kindness has a lasting impact.",
+      "You are growing in exactly the right direction.",
+      "You deserve peace, joy, and gentle days.",
+      "Your heart is strong, soft, and brave.",
+      "You handle challenges with grace and patience.",
+      "You are more than enough, exactly as you are.",
+      "Your creativity is a gift that inspires others.",
+      "You are safe to rest, reset, and begin again.",
+      "Your voice matters; your story matters.",
+      "You are allowed to celebrate yourself without apology.",
+      "Your courage is quiet, steady, and real.",
+      "You bring calm to the people you love.",
+      "Your future is soft, bright, and welcoming.",
+      "You choose love for yourself a little more each day.",
+      "Your dreams deserve your full belief.",
+      "You are the miracle you’ve been looking for."
+    ],
+    []
+  );
+
+  // Rotate affirmation every 6 seconds
   useEffect(() => {
-    // Pick a random affirmation each time app loads
-    const random = affirmations[Math.floor(Math.random() * affirmations.length)];
-    setAffirmation(random);
+    const t = setInterval(() => {
+      setIdx((i) => (i + 1) % affirmations.length);
+    }, 6000);
+    return () => clearInterval(t);
+  }, [affirmations.length]);
 
-    // Get initial session
-    const getSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) console.error("Error getting session:", error.message);
-      setSession(data?.session || null);
-      setLoading(false);
-    };
-    getSession();
-
-    // Listen for login/logout events
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+  // Auth boot + listener
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUser(data.user);
     });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUser(session?.user ?? null)
+    );
+    return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
-  }
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
-  if (!session) {
-    return (
-      <div className="app-container">
-        <Login />
-      </div>
-    );
-  }
+  if (!user) return <Login onLogin={setUser} />;
 
   return (
     <div className="app-container">
-      <header>{affirmation}</header>
-
-      <div className="controls">
-        <button
-          className="logout-btn"
-          onClick={() => supabase.auth.signOut()}
-        >
-          Logout
-        </button>
+      {/* Affirmations tile (click to shuffle) */}
+      <div
+        className="affirmations"
+        onClick={() => setIdx((i) => (i + 1) % affirmations.length)}
+        title="Click to see another affirmation"
+        style={{ cursor: "pointer" }}
+      >
+        {affirmations[idx]}
       </div>
 
-      <VideoUpload user={session.user} />
-      <VideoList user={session.user} />
+      {/* Simple top bar */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 10 }}>
+        <button onClick={handleSignOut}>Sign out</button>
+      </div>
+
+      {/* Upload + List */}
+      <VideoUpload user={user} onUpload={() => { /* VideoList fetches on mount; keep simple here */ }} />
+      <VideoList user={user} />
     </div>
   );
 }
