@@ -4,7 +4,7 @@ import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
-import "./style.css";
+import "../style.css";
 
 const AFFIRMATIONS = [
   "🌸 You are stronger than you think.",
