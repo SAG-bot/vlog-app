@@ -1,161 +1,115 @@
 import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import supabase from "../supabaseClient";
 
-const UploadList = ({ user }) => {
+export default function VideoList({ session }) {
   const [videos, setVideos] = useState([]);
   const [comments, setComments] = useState({});
-  const [newComments, setNewComments] = useState({});
-  const [likes, setLikes] = useState({});
-
-  // Fetch videos
-  const fetchVideos = async () => {
-    const { data, error } = await supabase
-      .from("videos")
-      .select("id, title, video_url, user_id");
-
-    if (error) console.error(error);
-    else setVideos(data);
-  };
-
-  // Fetch comments for each video
-  const fetchComments = async (videoId) => {
-    const { data, error } = await supabase
-      .from("comments")
-      .select("id, text, user_id")
-      .eq("video_id", videoId);
-
-    if (error) console.error(error);
-    else setComments((prev) => ({ ...prev, [videoId]: data }));
-  };
-
-  // Fetch likes for each video
-  const fetchLikes = async (videoId) => {
-    const { count, error } = await supabase
-      .from("likes")
-      .select("*", { count: "exact", head: true })
-      .eq("video_id", videoId);
-
-    if (error) console.error(error);
-    else setLikes((prev) => ({ ...prev, [videoId]: count }));
-  };
+  const user = session?.user;
 
   useEffect(() => {
     fetchVideos();
   }, []);
 
-  useEffect(() => {
-    videos.forEach((video) => {
-      fetchComments(video.id);
-      fetchLikes(video.id);
-    });
-  }, [videos]);
+  async function fetchVideos() {
+    const { data, error } = await supabase
+      .from("videos")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-  // Handle comment submit
-  const handleCommentSubmit = async (videoId, e) => {
-    e.preventDefault();
-    if (!newComments[videoId]) return;
+    if (!error) setVideos(data || []);
 
-    const { error } = await supabase.from("comments").insert([
-      {
-        video_id: videoId,
-        text: newComments[videoId],
-        user_id: user.id,
-      },
+    // Fetch comments for all videos
+    const { data: commentData } = await supabase
+      .from("comments")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (commentData) {
+      const grouped = {};
+      commentData.forEach((c) => {
+        grouped[c.video_id] = grouped[c.video_id] || [];
+        grouped[c.video_id].push(c);
+      });
+      setComments(grouped);
+    }
+  }
+
+  async function handleLikeVideo(videoId, currentLikes = 0) {
+    await supabase.from("videos").update({ likes: currentLikes + 1 }).eq("id", videoId);
+    fetchVideos();
+  }
+
+  async function handleComment(videoId, text) {
+    await supabase.from("comments").insert([
+      { video_id: videoId, user_id: user.id, text }
     ]);
+    fetchVideos();
+  }
 
-    if (error) console.error(error);
-    else {
-      fetchComments(videoId);
-      setNewComments((prev) => ({ ...prev, [videoId]: "" }));
-    }
-  };
+  async function handleDeleteComment(commentId) {
+    await supabase.from("comments").delete().eq("id", commentId);
+    fetchVideos();
+  }
 
-  // Delete a comment
-  const deleteComment = async (commentId, videoId) => {
-    const { error } = await supabase.from("comments").delete().eq("id", commentId);
-    if (error) console.error(error);
-    else fetchComments(videoId);
-  };
+  async function handleLikeComment(commentId, currentLikes = 0) {
+    await supabase.from("comments").update({ likes: currentLikes + 1 }).eq("id", commentId);
+    fetchVideos();
+  }
 
-  // Like a comment (just a demo counter, could be a separate table if needed)
-  const likeComment = (commentId) => {
-    alert(`Liked comment ${commentId} ❤️`); // placeholder
-  };
-
-  // Like a video
-  const handleLike = async (videoId) => {
-    const { error } = await supabase
-      .from("likes")
-      .insert([{ video_id: videoId, user_id: user.id }]);
-
-    if (error) console.error(error);
-    else fetchLikes(videoId);
-  };
-
-  // Delete a video
-  const deleteVideo = async (videoId, videoUrl) => {
-    const { error } = await supabase.from("videos").delete().eq("id", videoId);
-    if (error) console.error(error);
-    else {
-      // Also delete from storage
-      const filePath = videoUrl.split("/").pop();
-      await supabase.storage.from("videos").remove([filePath]);
-      fetchVideos();
-    }
-  };
+  async function handleDeleteVideo(videoId, videoUrl) {
+    if (!window.confirm("Delete this video?")) return;
+    const path = videoUrl.split("/").pop();
+    await supabase.storage.from("videos").remove([path]);
+    await supabase.from("videos").delete().eq("id", videoId);
+    fetchVideos();
+  }
 
   return (
     <div className="video-grid">
       {videos.map((video) => (
         <div key={video.id} className="video-tile">
           <h3>{video.title}</h3>
-          <video src={video.video_url} controls />
+          <video src={video.video_url} controls playsInline />
 
-          {/* Likes */}
-          <button className="like-btn" onClick={() => handleLike(video.id)}>
-            ❤️ {likes[video.id] || 0}
+          {/* Video likes */}
+          <button onClick={() => handleLikeVideo(video.id, video.likes || 0)}>
+            ❤️ {video.likes || 0}
           </button>
 
-          {/* Delete button only for owner */}
+          {/* Delete video only for owner */}
           {video.user_id === user.id && (
-            <button
-              className="delete-btn"
-              onClick={() => deleteVideo(video.id, video.video_url)}
-            >
-              Delete
+            <button onClick={() => handleDeleteVideo(video.id, video.video_url)}>
+              🗑️ Delete Video
             </button>
           )}
 
-          {/* Comments */}
+          {/* Comments section */}
           <div className="comments">
             <h4>Comments</h4>
-            {comments[video.id]?.map((comment) => (
-              <div key={comment.id} className="comment-row">
-                <span>{comment.text}</span>
-                <div className="comment-actions">
-                  <button onClick={() => likeComment(comment.id)}>❤️</button>
-                  {comment.user_id === user.id && (
-                    <button onClick={() => deleteComment(comment.id, video.id)}>✖️</button>
-                  )}
-                </div>
-              </div>
+            {(comments[video.id] || []).map((c) => (
+              <p key={c.id}>
+                <strong>{c.user_id === user.id ? "You" : c.user_id}:</strong> {c.text}
+                <button onClick={() => handleLikeComment(c.id, c.likes || 0)}>👍 {c.likes || 0}</button>
+                {c.user_id === user.id && (
+                  <button onClick={() => handleDeleteComment(c.id)}>❌</button>
+                )}
+              </p>
             ))}
-            <form onSubmit={(e) => handleCommentSubmit(video.id, e)}>
-              <input
-                type="text"
-                placeholder="Add a comment..."
-                value={newComments[video.id] || ""}
-                onChange={(e) =>
-                  setNewComments((prev) => ({ ...prev, [video.id]: e.target.value }))
-                }
-              />
-              <button type="submit">Post</button>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const text = e.target.comment.value.trim();
+                if (text) handleComment(video.id, text);
+                e.target.reset();
+              }}
+            >
+              <input type="text" name="comment" placeholder="Write a comment..." />
+              <button type="submit">💬</button>
             </form>
           </div>
         </div>
       ))}
     </div>
   );
-};
-
-export default UploadList;
+}
