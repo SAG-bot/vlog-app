@@ -1,15 +1,17 @@
+// src/App.jsx
 import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
+import "./style.css";
 
-const affirmations = [
+const AFFIRMATIONS = [
   "🌸 You are stronger than you think.",
   "✨ Growth takes time, but you’re on the right path.",
   "💫 Your presence makes the world brighter.",
   "🌷 Small steps forward are still progress.",
-  "🌙 Rest is productive too!!",
+  "🌙 Rest is productive too!!!",
   "🌟 You are capable of amazing things.",
   "🌼 Your kindness matters.",
   "🌊 Breathe deeply, you are safe here.",
@@ -27,37 +29,38 @@ const affirmations = [
   "🌸 You are enough, exactly as you are."
 ];
 
-function App() {
+export default function App() {
   const [user, setUser] = useState(null);
   const [videos, setVideos] = useState([]);
-
-  // Fetch affirmations randomly
   const [affirmation, setAffirmation] = useState("");
 
+  // pick a random affirmation on load
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * affirmations.length);
-    setAffirmation(affirmations[randomIndex]);
+    setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
   }, []);
 
-  // Check session
+  // auth session + listener
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
-    };
+    let mounted = true;
 
-    getSession();
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setUser(data?.session?.user ?? null);
+    }
+    checkSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
     return () => {
+      mounted = false;
       listener.subscription.unsubscribe();
     };
   }, []);
 
-  // Fetch videos from DB
+  // fetch videos (get public URL for each)
   const fetchVideos = async () => {
     const { data, error } = await supabase
       .from("videos")
@@ -65,32 +68,54 @@ function App() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching videos:", error);
-    } else {
-      setVideos(data);
+      console.error("fetchVideos error:", error);
+      setVideos([]);
+      return;
     }
+    // resolve public url for any file_path entries
+    const mapped = await Promise.all(
+      (data || []).map(async (v) => {
+        // if public_url already in DB, prefer it; else compute from file_path
+        if (v.public_url && v.public_url.startsWith("http")) {
+          return { ...v, _public_url: v.public_url };
+        }
+        if (v.file_path) {
+          const { data: urlData } = await supabase.storage.from("videos").getPublicUrl(v.file_path);
+          return { ...v, _public_url: urlData?.publicUrl ?? "" };
+        }
+        return { ...v, _public_url: "" };
+      })
+    );
+
+    setVideos(mapped);
   };
 
+  // auto-fetch when logged in
   useEffect(() => {
     if (user) fetchVideos();
+    else setVideos([]);
   }, [user]);
 
   if (!user) return <Login />;
 
   return (
-    <div className="app">
-      {/* Affirmation tile */}
-      <div className="affirmations">
-        <p>{affirmation}</p>
+    <div className="container">
+      <div className="affirmations">{affirmation}</div>
+
+      <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            setUser(null);
+          }}
+        >
+          Logout
+        </button>
       </div>
 
-      {/* Upload form */}
       <VideoUpload user={user} onUploadComplete={fetchVideos} />
 
-      {/* Videos grid */}
-      <UploadList user={user} videos={videos} refreshVideos={fetchVideos} />
+      <VideoList user={user} videos={videos} refreshVideos={fetchVideos} />
     </div>
   );
 }
-
-export default App;
