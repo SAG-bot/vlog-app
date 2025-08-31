@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
-import UploadList from "./components/UploadList";
+import VideoList from "./components/VideoList";
 
 const affirmations = [
   "🌸 You are stronger than you think.",
