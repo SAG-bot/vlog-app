@@ -55,23 +55,27 @@ export default function App() {
   };
 
   return (
-    <div>
+    <div className="container">
       {!session ? (
         <Login onLogin={setSession} />
       ) : (
         <>
+          {/* Top-right logout button */}
+          <div className="logout-container">
+            <button onClick={handleLogout}>🚪 Logout</button>
+          </div>
+
+          {/* Daily affirmation */}
           <div className="affirmations">
             <h2>Daily Affirmation 💕</h2>
             <p>{dailyAffirmation}</p>
           </div>
 
-          <button onClick={handleLogout}>🚪 Logout</button>
-
+          {/* Upload and video list */}
           <VideoUpload
             session={session}
             onUpload={() => setRefreshVideos(prev => !prev)}
           />
-
           <VideoList session={session} refresh={refreshVideos} />
         </>
       )}
