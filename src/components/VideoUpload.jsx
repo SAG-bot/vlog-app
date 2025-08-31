@@ -1,7 +1,8 @@
+// src/components/VideoUpload.jsx
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const VideoUpload = ({ user, onUploadComplete }) => {
+export default function VideoUpload({ user, onUploadComplete }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -9,53 +10,46 @@ const VideoUpload = ({ user, onUploadComplete }) => {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return alert("Please select a file");
-
     setUploading(true);
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    try {
+      const filePath = `public/${user.id}-${Date.now()}-${file.name}`;
 
-    // Upload to Supabase storage bucket "videos"
-    const { error: uploadError } = await supabase.storage
-      .from("videos")
-      .upload(fileName, file);
+      // Upload to storage bucket 'videos'
+      const { error: uploadError } = await supabase.storage.from("videos").upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
 
-    if (uploadError) {
-      console.error(uploadError);
-      alert("Upload failed!");
+      // (Optional) get public url (we will store file_path and compute public url in front-end)
+      const { data: urlData } = supabase.storage.from("videos").getPublicUrl(filePath);
+      const publicUrl = urlData?.publicUrl ?? null;
+
+      // Insert record: store file_path (and public_url for quick reference)
+      const { error: dbError } = await supabase.from("videos").insert([
+        {
+          title,
+          file_path: filePath,
+          public_url: publicUrl,
+          user_id: user.id,
+        },
+      ]);
+
+      if (dbError) throw dbError;
+
+      setTitle("");
+      setFile(null);
+
+      // refresh list
+      if (onUploadComplete) await onUploadComplete();
+      alert("Upload complete");
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed: " + (err.message || err));
+    } finally {
       setUploading(false);
-      return;
     }
-
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage
-      .from("videos")
-      .getPublicUrl(fileName);
-
-    const publicUrl = publicUrlData.publicUrl;
-
-    // Insert into DB
-    const { error: dbError } = await supabase.from("videos").insert([
-      {
-        title,
-        video_url: publicUrl,
-        user_id: user.id,
-      },
-    ]);
-
-    if (dbError) {
-      console.error(dbError);
-      alert("Database insert failed!");
-      setUploading(false);
-      return;
-    }
-
-    setTitle("");
-    setFile(null);
-    setUploading(false);
-
-    // Refresh video list in UploadList.jsx
-    if (onUploadComplete) onUploadComplete();
   };
 
   return (
@@ -68,17 +62,10 @@ const VideoUpload = ({ user, onUploadComplete }) => {
         onChange={(e) => setTitle(e.target.value)}
         required
       />
-      <input
-        type="file"
-        accept="video/*"
-        onChange={(e) => setFile(e.target.files[0])}
-        required
-      />
+      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} required />
       <button type="submit" disabled={uploading}>
         {uploading ? "Uploading..." : "Upload"}
       </button>
     </form>
   );
-};
-
-export default VideoUpload;
+}
