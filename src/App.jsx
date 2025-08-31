@@ -1,86 +1,96 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
-import VideoList from "./components/VideoList";
+import UploadList from "./components/UploadList";
 
-export default function App() {
+const affirmations = [
+  "🌸 You are stronger than you think.",
+  "✨ Growth takes time, but you’re on the right path.",
+  "💫 Your presence makes the world brighter.",
+  "🌷 Small steps forward are still progress.",
+  "🌙 Rest is productive too!!",
+  "🌟 You are capable of amazing things.",
+  "🌼 Your kindness matters.",
+  "🌊 Breathe deeply, you are safe here.",
+  "🌻 Choose progress over perfection.",
+  "🔥 You’ve overcome every hard day so far.",
+  "🌹 Believe in your own light.",
+  "☀️ Today is full of possibilities.",
+  "🌺 Your effort is worth it.",
+  "🌈 Healing isn’t linear, and that’s okay.",
+  "🌐 You belong, exactly as you are.",
+  "🕊️ Let go of what you can’t control.",
+  "🍃 Even on hard days, you’re growing.",
+  "💎 You are worthy of love and respect.",
+  "🌌 The future holds beautiful things for you.",
+  "🌸 You are enough, exactly as you are."
+];
+
+function App() {
   const [user, setUser] = useState(null);
-  const [idx, setIdx] = useState(0);
+  const [videos, setVideos] = useState([]);
 
-  // 20 calm, elegant affirmations
-  const affirmations = useMemo(
-    () => [
-      "You are deeply loved and endlessly worthy.",
-      "Your presence brings warmth and light to every room.",
-      "You create beauty in small, thoughtful ways every day.",
-      "You are allowed to take up space and be heard.",
-      "Your kindness has a lasting impact.",
-      "Baby you're pressure.",
-      "You deserve peace, joy, and gentle days.",
-      "Your heart is strong, soft, and brave.",
-      "You handle challenges with grace and patience.",
-      "You are more than enough, exactly as you are.",
-      "Your creativity is a gift that inspires others.",
-      "You are safe to rest, reset, and begin again.",
-      "Ndokuda hangu but haaa, this was hard broski.",
-      "You are allowed to celebrate yourself without apology.",
-      "Your courage is quiet, steady, and real.",
-      "You bring calm to the people you love.",
-      "Your future is soft, bright, and welcoming.",
-      "You choose love for yourself a little more each day.",
-      "Your dreams deserve your full belief.",
-      "You are the miracle you’ve been looking for."
-    ],
-    []
-  );
+  // Fetch affirmations randomly
+  const [affirmation, setAffirmation] = useState("");
 
-  // Rotate affirmation every 6 seconds
   useEffect(() => {
-    const t = setInterval(() => {
-      setIdx((i) => (i + 1) % affirmations.length);
-    }, 6000);
-    return () => clearInterval(t);
-  }, [affirmations.length]);
-
-  // Auth boot + listener
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUser(data.user);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setUser(session?.user ?? null)
-    );
-    return () => subscription.unsubscribe();
+    const randomIndex = Math.floor(Math.random() * affirmations.length);
+    setAffirmation(affirmations[randomIndex]);
   }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+  // Check session
+  useEffect(() => {
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
+    };
+
+    getSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Fetch videos from DB
+  const fetchVideos = async () => {
+    const { data, error } = await supabase
+      .from("videos")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching videos:", error);
+    } else {
+      setVideos(data);
+    }
   };
 
-  if (!user) return <Login onLogin={setUser} />;
+  useEffect(() => {
+    if (user) fetchVideos();
+  }, [user]);
+
+  if (!user) return <Login />;
 
   return (
-    <div className="app-container">
-      {/* Affirmations tile (click to shuffle) */}
-      <div
-        className="affirmations"
-        onClick={() => setIdx((i) => (i + 1) % affirmations.length)}
-        title="Click to see another affirmation"
-        style={{ cursor: "pointer" }}
-      >
-        {affirmations[idx]}
+    <div className="app">
+      {/* Affirmation tile */}
+      <div className="affirmations">
+        <p>{affirmation}</p>
       </div>
 
-      {/* Simple top bar */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 10 }}>
-        <button onClick={handleSignOut}>Sign out</button>
-      </div>
+      {/* Upload form */}
+      <VideoUpload user={user} onUploadComplete={fetchVideos} />
 
-      {/* Upload + List */}
-      <VideoUpload user={user} onUpload={() => { /* VideoList fetches on mount; keep simple here */ }} />
-      <VideoList user={user} />
+      {/* Videos grid */}
+      <UploadList user={user} videos={videos} refreshVideos={fetchVideos} />
     </div>
   );
 }
+
+export default App;
