@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function VideoList({ session }) {
+export default function VideoList({ session, refresh }) {
   const [videos, setVideos] = useState([]);
   const [newComment, setNewComment] = useState({});
-  const [refresh, setRefresh] = useState(false);
 
   useEffect(() => {
     fetchVideos();
-  }, [refresh]);
+  }, [session, refresh]); // 👈 Respond to external refresh
 
   const fetchVideos = async () => {
     const { data, error } = await supabase
@@ -23,7 +22,7 @@ export default function VideoList({ session }) {
   const handleDelete = async (id) => {
     const { error } = await supabase.from("videos").delete().eq("id", id);
     if (error) alert(error.message);
-    else setRefresh(!refresh);
+    else fetchVideos(); // 👈 Trigger local refresh
   };
 
   const handleLike = async (videoId) => {
@@ -31,7 +30,7 @@ export default function VideoList({ session }) {
       { video_id: videoId, user_id: session.user.id },
     ]);
     if (error) console.error(error);
-    else setRefresh(!refresh);
+    else fetchVideos(); // 👈 Trigger local refresh
   };
 
   const handleComment = async (videoId) => {
@@ -42,14 +41,14 @@ export default function VideoList({ session }) {
     if (error) console.error(error);
     else {
       setNewComment({ ...newComment, [videoId]: "" });
-      setRefresh(!refresh);
+      fetchVideos(); // 👈 Trigger local refresh
     }
   };
 
   const handleDeleteComment = async (commentId) => {
     const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (error) console.error(error);
-    else setRefresh(!refresh);
+    else fetchVideos(); // 👈 Trigger local refresh
   };
 
   return (
@@ -89,7 +88,9 @@ export default function VideoList({ session }) {
                 type="text"
                 placeholder="Add a comment..."
                 value={newComment[video.id] || ""}
-                onChange={(e) => setNewComment({ ...newComment, [video.id]: e.target.value })}
+                onChange={(e) =>
+                  setNewComment({ ...newComment, [video.id]: e.target.value })
+                }
               />
               <button type="submit">💬</button>
             </form>
