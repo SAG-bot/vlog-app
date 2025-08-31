@@ -20,21 +20,18 @@ export default function VideoUpload({ session, onUpload }) {
       const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // 1. Upload to storage
       const { error: uploadError } = await supabase.storage
         .from("videos")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // 2. Get public URL
       const { data: publicData } = supabase.storage
         .from("videos")
         .getPublicUrl(filePath);
 
       const publicUrl = publicData.publicUrl;
 
-      // 3. Save to DB
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
@@ -47,7 +44,7 @@ export default function VideoUpload({ session, onUpload }) {
 
       setTitle("");
       setFile(null);
-      if (onUpload) onUpload(); // refresh VideoList
+      if (onUpload) onUpload();
 
     } catch (error) {
       console.error("Upload failed:", error.message);
