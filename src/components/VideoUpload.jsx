@@ -1,52 +1,61 @@
-// src/components/VideoUpload.jsx
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function VideoUpload({ user, onUploadComplete }) {
+export default function VideoUpload({ onUpload }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return alert("Please select a file");
+    if (!file) return alert("Please choose a video file to upload");
+
     setUploading(true);
 
     try {
-      const filePath = `public/${user.id}-${Date.now()}-${file.name}`;
+      // 1. Get current logged in user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      // Upload to storage bucket 'videos'
-      const { error: uploadError } = await supabase.storage.from("videos").upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      if (userError || !user) {
+        throw new Error("You must be logged in to upload a video.");
+      }
+
+      // 2. Upload video file to Supabase storage
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("videos")
+        .upload(filePath, file);
+
       if (uploadError) throw uploadError;
 
-      // (Optional) get public url (we will store file_path and compute public url in front-end)
-      const { data: urlData } = supabase.storage.from("videos").getPublicUrl(filePath);
-      const publicUrl = urlData?.publicUrl ?? null;
-
-      // Insert record: store file_path (and public_url for quick reference)
+      // 3. Insert metadata into videos table
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
-          file_path: filePath,
-          public_url: publicUrl,
-          user_id: user.id,
+          video_url: filePath, // path inside bucket
+          user_id: user.id,    // ✅ IMPORTANT for RLS
         },
       ]);
 
       if (dbError) throw dbError;
 
+      // 4. Reset form
       setTitle("");
       setFile(null);
 
-      // refresh list
-      if (onUploadComplete) await onUploadComplete();
-      alert("Upload complete");
+      if (onUpload) onUpload(); // refresh video list
+      alert("Video uploaded successfully ✅");
     } catch (err) {
-      console.error("Upload failed:", err);
-      alert("Upload failed: " + (err.message || err));
+      console.error("Upload failed:", err.message);
+      alert("Upload failed: " + err.message);
     } finally {
       setUploading(false);
     }
@@ -54,17 +63,21 @@ export default function VideoUpload({ user, onUploadComplete }) {
 
   return (
     <form className="upload-form" onSubmit={handleUpload}>
-      <h3>Upload a Video</h3>
       <input
         type="text"
-        placeholder="Enter title"
+        placeholder="Enter video title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
       />
-      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} required />
+      <input
+        type="file"
+        accept="video/*"
+        onChange={(e) => setFile(e.target.files[0])}
+        required
+      />
       <button type="submit" disabled={uploading}>
-        {uploading ? "Uploading..." : "Upload"}
+        {uploading ? "Uploading..." : "Upload Video"}
       </button>
     </form>
   );
