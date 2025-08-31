@@ -1,111 +1,127 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
 
 export default function VideoList({ user }) {
   const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [commentText, setCommentText] = useState({}); // track comment inputs
+  const [comments, setComments] = useState({});
+  const [newComments, setNewComments] = useState({});
+  const [likes, setLikes] = useState({});
 
+  // Fetch videos
   useEffect(() => {
+    const fetchVideos = async () => {
+      const { data, error } = await supabase
+        .from("videos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setVideos(data);
+        fetchLikes(data);
+        fetchComments(data);
+      }
+    };
+
     fetchVideos();
   }, []);
 
-  const fetchVideos = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("videos")
-      .select("*, comments(*), likes(*)")
-      .order("created_at", { ascending: false });
+  // Fetch likes
+  const fetchLikes = async (videosData) => {
+    const { data } = await supabase.from("likes").select("*");
+    if (!data) return;
 
-    if (error) {
-      console.error("Error fetching videos:", error);
-    } else {
-      // Add public URL
-      const withUrls = data.map((v) => {
-        const { data: urlData } = supabase.storage
-          .from("videos")
-          .getPublicUrl(v.video_url);
-        return { ...v, public_url: urlData.publicUrl };
-      });
-      setVideos(withUrls);
-    }
-    setLoading(false);
+    const likeMap = {};
+    videosData.forEach((video) => {
+      likeMap[video.id] = data.filter((l) => l.video_id === video.id).length;
+    });
+    setLikes(likeMap);
   };
 
+  // Fetch comments
+  const fetchComments = async (videosData) => {
+    const { data } = await supabase.from("comments").select("*");
+    if (!data) return;
+
+    const commentMap = {};
+    videosData.forEach((video) => {
+      commentMap[video.id] = data.filter((c) => c.video_id === video.id);
+    });
+    setComments(commentMap);
+  };
+
+  // Like handler
   const handleLike = async (videoId) => {
-    const { error } = await supabase.from("likes").insert([
-      { video_id: videoId, user_id: user.id },
+    await supabase.from("likes").insert([
+      { video_id: videoId, user_id: user.id }
     ]);
-    if (!error) fetchVideos();
+    fetchLikes(videos);
   };
 
-  const handleComment = async (videoId) => {
-    if (!commentText[videoId]) return;
-    const { error } = await supabase.from("comments").insert([
-      { video_id: videoId, user_id: user.id, text: commentText[videoId] },
+  // Comment handler
+  const handleAddComment = async (videoId) => {
+    if (!newComments[videoId]) return;
+
+    await supabase.from("comments").insert([
+      { video_id: videoId, user_id: user.id, content: newComments[videoId] }
     ]);
-    if (!error) {
-      setCommentText((prev) => ({ ...prev, [videoId]: "" }));
-      fetchVideos();
-    }
+
+    setNewComments({ ...newComments, [videoId]: "" });
+    fetchComments(videos);
   };
 
-  const handleDelete = async (id, path) => {
-    const { error } = await supabase.from("videos").delete().eq("id", id);
-    if (!error) {
-      await supabase.storage.from("videos").remove([path]);
-      setVideos((vids) => vids.filter((v) => v.id !== id));
-    }
+  // Delete handler
+  const handleDelete = async (videoId) => {
+    await supabase.from("videos").delete().eq("id", videoId);
+    setVideos(videos.filter((v) => v.id !== videoId));
   };
-
-  if (loading) return <p>Loading videos...</p>;
 
   return (
     <div className="video-grid">
       {videos.map((video) => (
-        <div className="tile" key={video.id}>
+        <div className="video-tile" key={video.id}>
           <h3>{video.title}</h3>
-          <video width="100%" controls>
-            <source src={video.public_url} type="video/mp4" />
-            Your browser does not support video.
+          <video controls>
+            <source src={video.video_url} type="video/mp4" />
+            Your browser does not support the video tag.
           </video>
 
-          {/* Likes */}
-          <div className="likes-section">
-            <button onClick={() => handleLike(video.id)}>❤️ Like</button>
-            <span>{video.likes?.length || 0} likes</span>
+          <div className="video-actions">
+            <button
+              className="like-btn"
+              onClick={() => handleLike(video.id)}
+            >
+              ❤️ {likes[video.id] || 0}
+            </button>
+
+            {user.id === video.user_id && (
+              <button
+                className="delete-btn"
+                onClick={() => handleDelete(video.id)}
+              >
+                🗑 Delete
+              </button>
+            )}
           </div>
 
-          {/* Comments */}
-          <div className="comments-section">
+          <div className="comments">
             <h4>Comments</h4>
             <div className="comment-list">
-              {video.comments?.map((c) => (
-                <p key={c.id}>
-                  <strong>{c.user_id.slice(0, 5)}:</strong> {c.text}
+              {comments[video.id]?.map((c) => (
+                <p key={c.id} className="comment">
+                  {c.content}
                 </p>
               ))}
             </div>
             <input
               type="text"
-              placeholder="Write a comment..."
-              value={commentText[video.id] || ""}
+              placeholder="Add a comment..."
+              value={newComments[video.id] || ""}
               onChange={(e) =>
-                setCommentText((prev) => ({ ...prev, [video.id]: e.target.value }))
+                setNewComments({ ...newComments, [video.id]: e.target.value })
               }
             />
-            <button onClick={() => handleComment(video.id)}>Post</button>
+            <button onClick={() => handleAddComment(video.id)}>Post</button>
           </div>
-
-          {/* Delete (owner only) */}
-          {video.user_id === user.id && (
-            <button
-              className="delete-btn"
-              onClick={() => handleDelete(video.id, video.video_url)}
-            >
-              Delete
-            </button>
-          )}
         </div>
       ))}
     </div>
