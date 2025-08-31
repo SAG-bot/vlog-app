@@ -9,7 +9,7 @@ export default function VideoUpload({ session, onUpload }) {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file || !title) {
-      alert("Please add a title and select a video file");
+      alert("Please enter a title and select a video");
       return;
     }
 
@@ -17,21 +17,22 @@ export default function VideoUpload({ session, onUpload }) {
       setUploading(true);
 
       const fileExt = file.name.split(".").pop();
-      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${Date.now()}_${session.user.id}.${fileExt}`;
+      const filePath = `${session.user.id}/${fileName}`;
 
+      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("videos")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      const { data: publicData } = supabase.storage
+      // Get public URL for playback
+      const { data: { publicUrl } } = supabase.storage
         .from("videos")
         .getPublicUrl(filePath);
 
-      const publicUrl = publicData.publicUrl;
-
+      // Save video record in DB
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
@@ -44,10 +45,10 @@ export default function VideoUpload({ session, onUpload }) {
 
       setTitle("");
       setFile(null);
+      alert("Video uploaded successfully 🎉");
       if (onUpload) onUpload();
-
     } catch (error) {
-      console.error("Upload failed:", error.message);
+      console.error("Error uploading video:", error.message);
       alert("Error uploading video: " + error.message);
     } finally {
       setUploading(false);
@@ -62,11 +63,7 @@ export default function VideoUpload({ session, onUpload }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
-      <input
-        type="file"
-        accept="video/*"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
+      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} />
       <button type="submit" disabled={uploading}>
         {uploading ? "Uploading..." : "Upload Video"}
       </button>
