@@ -30,8 +30,15 @@ const affirmations = [
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [dailyAffirmation, setDailyAffirmation] = useState("");
+  const [refreshVideos, setRefreshVideos] = useState(false);
 
   useEffect(() => {
+    // Set daily affirmation based on date
+    const index = new Date().getDate() % affirmations.length;
+    setDailyAffirmation(affirmations[index]);
+
+    // Supabase session handling
     const currentSession = supabase.auth.getSession();
     currentSession.then(({ data: { session } }) => setSession(session));
 
@@ -54,17 +61,18 @@ export default function App() {
       ) : (
         <>
           <div className="affirmations">
-            <h2>Daily Affirmations 💕</h2>
-            <ul>
-              {affirmations.map((a, idx) => (
-                <li key={idx}>{a}</li>
-              ))}
-            </ul>
+            <h2>Daily Affirmation 💕</h2>
+            <p>{dailyAffirmation}</p>
           </div>
 
           <button onClick={handleLogout}>🚪 Logout</button>
-          <VideoUpload session={session} onUpload={() => window.location.reload()} />
-          <VideoList session={session} />
+
+          <VideoUpload
+            session={session}
+            onUpload={() => setRefreshVideos(prev => !prev)}
+          />
+
+          <VideoList session={session} refresh={refreshVideos} />
         </>
       )}
     </div>
