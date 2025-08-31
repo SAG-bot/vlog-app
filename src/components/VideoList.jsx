@@ -3,101 +3,93 @@ import { supabase } from "../supabaseClient";
 
 export default function VideoList({ session }) {
   const [videos, setVideos] = useState([]);
-  const [comments, setComments] = useState({});
+  const [newComment, setNewComment] = useState({});
+  const [refresh, setRefresh] = useState(false);
+
+  useEffect(() => {
+    fetchVideos();
+  }, [refresh]);
 
   const fetchVideos = async () => {
     const { data, error } = await supabase
       .from("videos")
-      .select("*, comments(*), likes(*)")
-      .order("created_at", { ascending: false });
+      .select("id, title, video_url, user_id, comments(id, content, user_id), likes(id, user_id)")
+      .order("id", { ascending: false });
 
-    if (!error) {
-      setVideos(data);
-    }
+    if (error) console.error(error);
+    else setVideos(data);
   };
 
-  const handleDeleteVideo = async (videoId) => {
-    const { error } = await supabase
-      .from("videos")
-      .delete()
-      .eq("id", videoId)
-      .eq("user_id", session.user.id);
-
-    if (!error) fetchVideos();
+  const handleDelete = async (id) => {
+    const { error } = await supabase.from("videos").delete().eq("id", id);
+    if (error) alert(error.message);
+    else setRefresh(!refresh);
   };
 
   const handleLike = async (videoId) => {
-    await supabase.from("likes").insert([
-      { video_id: videoId, user_id: session.user.id }
+    const { error } = await supabase.from("likes").insert([
+      { video_id: videoId, user_id: session.user.id },
     ]);
-    fetchVideos();
+    if (error) console.error(error);
+    else setRefresh(!refresh);
   };
 
-  const handleComment = async (videoId, text) => {
-    if (!text.trim()) return;
-    await supabase.from("comments").insert([
-      { video_id: videoId, user_id: session.user.id, text }
+  const handleComment = async (videoId) => {
+    if (!newComment[videoId]) return;
+    const { error } = await supabase.from("comments").insert([
+      { video_id: videoId, user_id: session.user.id, content: newComment[videoId] },
     ]);
-    setComments({ ...comments, [videoId]: "" });
-    fetchVideos();
+    if (error) console.error(error);
+    else {
+      setNewComment({ ...newComment, [videoId]: "" });
+      setRefresh(!refresh);
+    }
   };
 
-  const handleDeleteComment = async (commentId, userId) => {
-    if (userId !== session.user.id) return;
-    await supabase.from("comments").delete().eq("id", commentId);
-    fetchVideos();
+  const handleDeleteComment = async (commentId) => {
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
+    if (error) console.error(error);
+    else setRefresh(!refresh);
   };
-
-  useEffect(() => {
-    fetchVideos();
-  }, []);
 
   return (
     <div className="video-grid">
       {videos.map((video) => (
-        <div key={video.id} className="video-tile">
+        <div className="video-tile" key={video.id}>
           <h3>{video.title}</h3>
-          <video controls>
-            <source src={video.video_url} type="video/mp4" />
-          </video>
-          <div>
-            <button onClick={() => handleLike(video.id)}>❤️ Like ({video.likes?.length || 0})</button>
-            {video.user_id === session.user.id && (
-              <button
-                className="delete-btn"
-                onClick={() => handleDeleteVideo(video.id)}
-              >
-                Delete
-              </button>
-            )}
-          </div>
+          <video controls src={video.video_url}></video>
+
+          <button className="like-btn" onClick={() => handleLike(video.id)}>
+            ❤️ Like ({video.likes?.length || 0})
+          </button>
+
+          {video.user_id === session.user.id && (
+            <button className="delete-btn" onClick={() => handleDelete(video.id)}>
+              🗑 Delete
+            </button>
+          )}
 
           <div className="comments">
+            <h4>Comments</h4>
             {video.comments?.map((c) => (
-              <div key={c.id} className="comment">
-                <span>{c.text}</span>
+              <div key={c.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{c.content}</span>
                 {c.user_id === session.user.id && (
-                  <button
-                    onClick={() => handleDeleteComment(c.id, c.user_id)}
-                  >
-                    ❌
-                  </button>
+                  <button onClick={() => handleDeleteComment(c.id)}>❌</button>
                 )}
               </div>
             ))}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleComment(video.id, comments[video.id] || "");
+                handleComment(video.id);
               }}
             >
               <input
                 type="text"
                 placeholder="Add a comment..."
-                value={comments[video.id] || ""}
-                onChange={(e) =>
-                  setComments({ ...comments, [video.id]: e.target.value })
-                }
+                value={newComment[video.id] || ""}
+                onChange={(e) => setNewComment({ ...newComment, [video.id]: e.target.value })}
               />
               <button type="submit">💬</button>
             </form>
