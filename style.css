@@ -1,173 +1,94 @@
-/* General Reset */
-body {
-  font-family: "Poppins", sans-serif;
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background: linear-gradient(to bottom right, #a8d8ff, #d0eaff);
-  color: #222;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* Affirmations tile */
-.affirmations {
-  margin: 20px;
-  padding: 15px;
-  background: #8e6dfd;
-  color: #fff;
-  border-radius: 16px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-  max-width: 600px;
-  text-align: center;
-  font-size: 1.1rem;
-  line-height: 1.6;
-}
-
-/* Login Page */
-.login-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 80vh;
-  width: 100%;
-}
-
-.login-card {
-  background: #8e6dfd;
-  color: #fff;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.2);
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
-}
-
-.login-card h2 {
-  margin-bottom: 20px;
-}
-
-.login-card input {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: none;
-}
-
-.login-card button {
-  width: 100%;
-  background: #ff85c1;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  margin-top: 12px;
-  font-weight: bold;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.login-card button:hover {
-  background: #ff5ea3;
-}
-
-/* Upload form */
-.upload-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin: 20px auto;
-  padding: 20px;
-  background: #8e6dfd;
-  color: white;
-  border-radius: 16px;
-  max-width: 400px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-}
-
-.upload-form input[type="text"],
-.upload-form input[type="file"] {
-  background: #fff;
-  color: #333;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-  width: 100%;
-}
-
-/* Video grid */
+/* Responsive grid for videos */
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
-  padding: 20px;
-  width: 100%;
-  max-width: 1200px;
+  grid-template-columns: 1fr; /* 1 column on mobile */
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
 
 .video-tile {
-  background: #8e6dfd;
+  background: linear-gradient(145deg, #7b68ee, #9370db);
+  border-radius: 15px;
+  padding: 1rem;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   color: white;
-  border-radius: 16px;
-  padding: 15px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
 }
 
 .video-tile h3 {
-  margin-bottom: 10px;
+  margin-bottom: 0.5rem;
+  color: #ffe4f2; /* soft pink */
 }
 
 .video-tile video {
   width: 100%;
-  border-radius: 12px;
-  margin-bottom: 10px;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
 }
 
 /* Buttons */
-button {
-  background: #ff85c1;
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: background 0.3s;
+.video-actions {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0;
 }
 
-button:hover {
-  background: #ff5ea3;
+.like-btn,
+.delete-btn {
+  background: #ff69b4; /* hot pink */
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 14px;
+  color: white;
 }
 
 .delete-btn {
-  background: #ff4d6d;
-}
-
-.like-btn {
-  background: #ff85c1;
+  background: #ff4d6d; /* red-pink */
 }
 
 /* Comments */
 .comments {
-  margin-top: 10px;
-  width: 100%;
+  margin-top: 0.5rem;
+  text-align: left;
 }
 
-.comments form {
-  display: flex;
-  gap: 6px;
+.comment-list {
+  max-height: 100px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
 }
 
+.comment {
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.3rem;
+  border-radius: 5px;
+  margin-bottom: 0.3rem;
+}
+
+/* Comment input */
 .comments input {
-  flex: 1;
-  padding: 8px;
+  width: 70%;
+  padding: 0.4rem;
+  border-radius: 6px;
   border: none;
-  border-radius: 8px;
+  margin-right: 0.3rem;
+}
+
+.comments button {
+  background: #6a5acd; /* purple */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+/* Responsive grid: 3 columns on desktop */
+@media (min-width: 768px) {
+  .video-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
