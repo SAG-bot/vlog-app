@@ -16,25 +16,23 @@ export default function VideoUpload({ user }) {
     setUploading(true);
 
     try {
-      // ✅ Upload into public/ folder
+      // Force into public/ folder
       const filePath = `public/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from("videos") // bucket name = videos
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
 
-      if (error) {
-        throw error;
-      }
+      // Upload
+      const { error: uploadError } = await supabase.storage
+        .from("videos") // bucket must be named "videos"
+        .upload(filePath, file);
 
-      // ✅ Get public URL
+      if (uploadError) throw uploadError;
+
+      // ✅ Generate public URL
       const { data: publicData } = supabase.storage
         .from("videos")
         .getPublicUrl(filePath);
 
       const publicUrl = publicData.publicUrl;
+      console.log("Public video URL:", publicUrl); // Debug log
 
       // ✅ Save to DB
       const { error: dbError } = await supabase.from("videos").insert([
@@ -45,9 +43,7 @@ export default function VideoUpload({ user }) {
         },
       ]);
 
-      if (dbError) {
-        throw dbError;
-      }
+      if (dbError) throw dbError;
 
       alert("Video uploaded successfully!");
       setTitle("");
