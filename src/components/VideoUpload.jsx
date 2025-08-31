@@ -1,65 +1,88 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-const VideoUpload = ({ user, onUpload }) => {
+export default function VideoUpload({ user }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) return alert("Please select a file");
-
-    setLoading(true);
-
-    const fileName = `${user.id}-${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
-      .from("videos")
-      .upload(fileName, file);
-
-    if (uploadError) {
-      setLoading(false);
-      return alert("Upload failed: " + uploadError.message);
+    if (!file) {
+      alert("Please select a video to upload");
+      return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from("videos")
-      .getPublicUrl(fileName);
+    setUploading(true);
 
-    const { error: dbError } = await supabase.from("videos").insert([
-      {
-        title,
-        video_url: urlData.publicUrl,
-        user_id: user.id,
-      },
-    ]);
+    try {
+      // ✅ Upload into public/ folder
+      const filePath = `public/${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from("videos") // bucket name = videos
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-    setLoading(false);
+      if (error) {
+        throw error;
+      }
 
-    if (dbError) {
-      alert("Database insert failed: " + dbError.message);
-    } else {
+      // ✅ Get public URL
+      const { data: publicData } = supabase.storage
+        .from("videos")
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicData.publicUrl;
+
+      // ✅ Save to DB
+      const { error: dbError } = await supabase.from("videos").insert([
+        {
+          title,
+          video_url: publicUrl,
+          user_id: user.id,
+        },
+      ]);
+
+      if (dbError) {
+        throw dbError;
+      }
+
+      alert("Video uploaded successfully!");
       setTitle("");
       setFile(null);
-      onUpload();
+    } catch (err) {
+      console.error("Upload failed:", err.message);
+      alert("Upload failed: " + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <form onSubmit={handleUpload} className="upload-form">
-      <input
-        type="text"
-        placeholder="Video title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
-      />
-      <input type="file" accept="video/mp4" onChange={(e) => setFile(e.target.files[0])} />
-      <button type="submit" disabled={loading}>
-        {loading ? "Uploading..." : "Upload"}
-      </button>
-    </form>
+    <div className="tile">
+      <h2>Upload a New Video</h2>
+      <form onSubmit={handleUpload}>
+        <input
+          type="text"
+          placeholder="Video title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          className="input-field"
+        />
+        <input
+          type="file"
+          accept="video/*"
+          onChange={(e) => setFile(e.target.files[0])}
+          required
+          className="input-field"
+        />
+        <button type="submit" className="btn" disabled={uploading}>
+          {uploading ? "Uploading..." : "Upload"}
+        </button>
+      </form>
+    </div>
   );
-};
-
-export default VideoUpload;
+}
