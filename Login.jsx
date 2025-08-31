@@ -1,62 +1,56 @@
-// src/components/Login.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { supabase } from "../supabaseClient";
 
-export default function Login() {
+export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return alert(error.message);
-    // successful login triggers auth listener in App.jsx
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      alert(error.message);
+    } else {
+      onLogin(data.session);
+    }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
-    if (error) return alert(error.message);
-    alert("Check your email to confirm your account.");
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (error) {
+      alert(error.message);
+    } else {
+      alert("Check your email for confirmation!");
+    }
   };
 
   return (
     <div className="login-page">
-      <div>
-        <div className="affirmations">
-          🌸 You are loved. • 🌟 Keep going. • ✨ Small steps matter.
-        </div>
-
-        <div className="login-card">
-          <h2>Welcome back</h2>
-          <form onSubmit={handleLogin}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <button type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </button>
-            <button type="button" onClick={handleSignup} style={{ marginTop: 8 }}>
-              Sign up
-            </button>
-          </form>
-        </div>
+      <div className="login-card">
+        <h2>Welcome 💙</h2>
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="submit">Login</button>
+        </form>
+        <button onClick={handleSignup}>Sign Up</button>
       </div>
     </div>
   );
