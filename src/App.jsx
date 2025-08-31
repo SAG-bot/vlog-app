@@ -3,29 +3,29 @@ import { supabase } from "./supabaseClient";
 import Login from "./components/Login";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
-import "../style.css";
+import "./style.css";
 
 const affirmations = [
   "🌸 You are stronger than you think.",
-  "💙 Your presence makes the world brighter.",
-  "🌈 Growth is happening, even on tough days.",
-  "✨ Your potential is limitless.",
-  "🌻 You bring kindness wherever you go.",
-  "🌟 Small steps still move you forward.",
-  "💜 You are worthy of love and respect.",
-  "🌸 Every day is a chance to bloom.",
-  "🌈 You are enough, exactly as you are.",
-  "🌟 Your dreams are worth chasing.",
-  "💙 You’re making progress you can’t always see.",
-  "🌻 Gratitude turns little into enough.",
-  "🌸 You inspire others without even knowing.",
-  "💜 You’re allowed to rest and recharge.",
-  "🌟 Courage is choosing to keep going.",
-  "🌈 You bring beauty to this world.",
-  "💙 Mistakes mean you’re learning.",
-  "🌸 Believe in your quiet strength.",
-  "🌻 Your kindness has ripple effects.",
-  "💜 You are becoming the best version of you."
+  "💎 Every step forward counts.",
+  "✨ Your energy inspires others.",
+  "🌱 Growth takes time, and you're growing beautifully.",
+  "🌊 Peace flows through you.",
+  "🌞 You bring light wherever you go.",
+  "🌷 You deserve to bloom in your own time.",
+  "🦋 Change is beautiful and so are you.",
+  "🌈 Brighter days are always ahead.",
+  "🔥 You are resilient and unstoppable.",
+  "🎶 Your vibe attracts positivity.",
+  "🌟 You shine even on cloudy days.",
+  "💖 You are deeply loved and valued.",
+  "🕊 Calmness surrounds your heart.",
+  "🍀 Luck and blessings flow to you.",
+  "🌻 Keep reaching for the sun.",
+  "🌌 The universe is on your side.",
+  "💫 Your dreams are valid and possible.",
+  "🏔 You can climb any mountain.",
+  "🌺 You are more than enough."
 ];
 
 export default function App() {
@@ -33,29 +33,40 @@ export default function App() {
 
   useEffect(() => {
     const currentSession = supabase.auth.getSession();
-    currentSession.then(({ data }) => setSession(data.session));
+    currentSession.then(({ data: { session } }) => setSession(session));
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (!session) {
-    return <Login onLogin={setSession} />;
-  }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
 
   return (
     <div>
-      <div className="affirmations">
-        <h2>{affirmations[Math.floor(Math.random() * affirmations.length)]}</h2>
-      </div>
-      <VideoUpload session={session} onUpload={() => {}} />
-      <VideoList session={session} />
-      <button onClick={() => supabase.auth.signOut()}>Logout</button>
+      {!session ? (
+        <Login onLogin={setSession} />
+      ) : (
+        <>
+          <div className="affirmations">
+            <h2>Daily Affirmations 💕</h2>
+            <ul>
+              {affirmations.map((a, idx) => (
+                <li key={idx}>{a}</li>
+              ))}
+            </ul>
+          </div>
+
+          <button onClick={handleLogout}>🚪 Logout</button>
+          <VideoUpload session={session} onUpload={() => window.location.reload()} />
+          <VideoList session={session} />
+        </>
+      )}
     </div>
   );
 }
