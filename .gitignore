@@ -5,7 +5,7 @@ node_modules/
 dist/
 build/
 
-# Local env files
+# Env (handled in Netlify)
 .env
 .env.local
 .env.*.local
@@ -16,26 +16,21 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Editor directories and files
+# Editor
 .vscode/
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# OS-specific files
+# OS files
 .DS_Store
 Thumbs.db
 
-# Cache
+# Caches
 .eslintcache
 .cache/
 vite-cache/
 
-# Netlify local folder
+# Netlify local state
 .netlify/
 
-# Optional: test coverage
+# Optional coverage
 coverage/
