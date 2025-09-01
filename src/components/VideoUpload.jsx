@@ -20,48 +20,50 @@ export default function VideoUpload({ session, onUploadComplete }) {
     // Generate unique file name
     const fileName = `${userId}-${Date.now()}-${file.name}`;
 
-    // 1. Upload to Storj via backend
+    // Prepare form data for Netlify function
     const formData = new FormData();
     formData.append("file", file);
     formData.append("fileName", fileName);
 
-    const res = await fetch("/api/upload-to-storj", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      // 1. Upload to Storj via Netlify Function
+      const res = await fetch("/.netlify/functions/upload-to-storj", {
+        method: "POST",
+        body: formData,
+      });
 
-    const { success, url, error } = await res.json();
+      const { success, url, error } = await res.json();
 
-    if (!success) {
-      console.error("Storj upload failed:", error);
-      alert("Upload failed: " + error);
+      if (!success) {
+        throw new Error(error || "Unknown upload error");
+      }
+
+      // 2. Insert metadata into Supabase
+      const { error: dbError } = await supabase.from("videos").insert([
+        {
+          title,
+          video_url: url, // full Storj URL
+          user_id: userId,
+        },
+      ]);
+
+      if (dbError) {
+        throw new Error(dbError.message);
+      }
+
+      // 3. Reset form and notify
+      setTitle("");
+      setFile(null);
+      alert("✅ Video uploaded successfully!");
+
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+    } catch (err) {
+      console.error("Upload error:", err.message);
+      alert("Upload failed: " + err.message);
+    } finally {
       setUploading(false);
-      return;
-    }
-
-    // 2. Insert metadata into Supabase
-    const { error: dbError } = await supabase.from("videos").insert([
-      {
-        title,
-        video_url: url, // full Storj URL
-        user_id: userId,
-      },
-    ]);
-
-    if (dbError) {
-      console.error("Error inserting into videos table:", dbError.message);
-      alert("Database insert failed: " + dbError.message);
-      setUploading(false);
-      return;
-    }
-
-    setTitle("");
-    setFile(null);
-    setUploading(false);
-    alert("✅ Video uploaded successfully!");
-
-    if (onUploadComplete) {
-      onUploadComplete();
     }
   };
 
@@ -74,7 +76,11 @@ export default function VideoUpload({ session, onUploadComplete }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
-      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0])} />
+      <input
+        type="file"
+        accept="video/*"
+        onChange={(e) => setFile(e.target.files[0])}
+      />
       <button type="submit" disabled={uploading}>
         {uploading ? "Uploading..." : "Upload"}
       </button>
