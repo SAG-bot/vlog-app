@@ -6,7 +6,7 @@ export default function VideoUpload({ session, onUploadComplete }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const userId = session?.user?.id;
+  const userId = session?.user?.id || "anonymous";
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -24,49 +24,43 @@ export default function VideoUpload({ session, onUploadComplete }) {
     formData.append("fileName", fileName);
 
     try {
-      // 1️⃣ Upload to Google Drive via Netlify Function
+      // Call Netlify Function
       const res = await fetch("/.netlify/functions/upload-to-gdrive", {
         method: "POST",
-        body: formData,
+        body: formData
       });
 
-      // 2️⃣ Read the body ONCE as text
+      // Read body once and parse
       const raw = await res.text();
-
-      // 3️⃣ Try to parse JSON
       let data;
       try {
         data = JSON.parse(raw);
       } catch {
-        throw new Error(`Unexpected response: ${raw.slice(0, 100)}`);
+        throw new Error(`Unexpected response: ${raw.slice(0, 120)}`);
       }
 
-      // 4️⃣ Check for backend error
       if (!data.success) {
         throw new Error(data.error || "Unknown upload error");
       }
 
-      // 5️⃣ Insert metadata into Supabase
+      // Save metadata to Supabase
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
-          video_url: data.url, // Direct download link from Google Drive
-          user_id: userId,
-        },
+          video_url: data.url,
+          user_id: userId
+        }
       ]);
 
       if (dbError) {
         throw new Error(dbError.message);
       }
 
-      // 6️⃣ Reset form and notify
       setTitle("");
       setFile(null);
       alert("✅ Video uploaded successfully!");
 
-      if (onUploadComplete) {
-        onUploadComplete();
-      }
+      if (onUploadComplete) onUploadComplete();
     } catch (err) {
       console.error("Upload error:", err);
       alert("Upload failed: " + err.message);
@@ -76,19 +70,22 @@ export default function VideoUpload({ session, onUploadComplete }) {
   };
 
   return (
-    <form className="upload-form" onSubmit={handleUpload}>
+    <form className="upload-form" onSubmit={handleUpload} style={{ display: "grid", gap: 12, maxWidth: 420 }}>
       <h3>Upload a Video</h3>
+
       <input
         type="text"
         placeholder="Enter a title..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
+
       <input
         type="file"
         accept="video/*"
-        onChange={(e) => setFile(e.target.files[0])}
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
       />
+
       <button type="submit" disabled={uploading}>
         {uploading ? "Uploading..." : "Upload"}
       </button>
