@@ -26,6 +26,7 @@ exports.handler = async (event) => {
       }
 
       try {
+        // Authenticate with Google Drive API using service account
         const auth = new google.auth.JWT(
           process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
           null,
@@ -35,16 +36,19 @@ exports.handler = async (event) => {
 
         const drive = google.drive({ version: "v3", auth });
 
+        // File metadata
         const fileMetadata = {
           name: fileName,
           parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
         };
 
+        // File content
         const media = {
           mimeType: file.headers["content-type"],
           body: fs.createReadStream(file.path),
         };
 
+        // Upload to Google Drive
         const uploadRes = await drive.files.create({
           resource: fileMetadata,
           media,
@@ -57,12 +61,13 @@ exports.handler = async (event) => {
           requestBody: { role: "reader", type: "anyone" },
         });
 
+        // Respond with JSON
         resolve({
           statusCode: 200,
           body: JSON.stringify({
             success: true,
-            url: uploadRes.data.webContentLink,
-            viewUrl: uploadRes.data.webViewLink,
+            url: uploadRes.data.webContentLink, // direct download link
+            viewUrl: uploadRes.data.webViewLink, // Google Drive preview link
           }),
         });
       } catch (error) {
