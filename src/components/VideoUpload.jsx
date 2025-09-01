@@ -3,73 +3,47 @@ import { supabase } from "../supabaseClient";
 
 export default function VideoUpload({ session, onUpload }) {
   const [title, setTitle] = useState("");
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [videoLink, setVideoLink] = useState("");
 
-  const handleUpload = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file || !title) {
-      alert("Please add a title and select a video file");
-      return;
-    }
 
-    try {
-      setUploading(true);
+    const { error } = await supabase.from("videos").insert([
+      {
+        title,
+        video_link: videoLink,
+        user_id: session.user.id,
+      },
+    ]);
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("videos")
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicData } = supabase.storage
-        .from("videos")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicData.publicUrl;
-
-      const { error: dbError } = await supabase.from("videos").insert([
-        {
-          title,
-          video_url: publicUrl,
-          user_id: session.user.id,
-        },
-      ]);
-
-      if (dbError) throw dbError;
-
+    if (error) {
+      console.error("Error uploading video link:", error);
+      alert("Error saving video link");
+    } else {
+      alert("Video link added!");
       setTitle("");
-      setFile(null);
+      setVideoLink("");
       if (onUpload) onUpload();
-
-    } catch (error) {
-      console.error("Upload failed:", error.message);
-      alert("Error uploading video: " + error.message);
-    } finally {
-      setUploading(false);
     }
   };
 
   return (
-    <form className="upload-form" onSubmit={handleUpload}>
+    <form className="upload-form" onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Video title"
+        placeholder="Video Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        required
       />
       <input
-        type="file"
-        accept="video/*"
-        onChange={(e) => setFile(e.target.files[0])}
+        type="url"
+        placeholder="YouTube or Vimeo Link"
+        value={videoLink}
+        onChange={(e) => setVideoLink(e.target.value)}
+        required
       />
-      <button type="submit" disabled={uploading}>
-        {uploading ? "Uploading..." : "Upload Video"}
-      </button>
+      <button type="submit">Add Video</button>
     </form>
   );
 }
