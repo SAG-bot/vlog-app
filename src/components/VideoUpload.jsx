@@ -23,18 +23,21 @@ export default function VideoUpload({ session, onUploadComplete }) {
     formData.append("fileName", fileName);
 
     try {
-      // Upload to Storj via Netlify Function
+      // 1. Upload to Storj via Netlify Function
       const res = await fetch("/.netlify/functions/upload-to-storj", {
         method: "POST",
         body: formData,
       });
 
+      // 2. Read the body ONCE as text
+      const raw = await res.text();
+
+      // 3. Try to parse JSON
       let data;
       try {
-        data = await res.json();
+        data = JSON.parse(raw);
       } catch {
-        const text = await res.text();
-        throw new Error(`Unexpected response: ${text.slice(0, 100)}`);
+        throw new Error(`Unexpected response: ${raw.slice(0, 100)}`);
       }
 
       const { success, url, error } = data;
@@ -43,7 +46,7 @@ export default function VideoUpload({ session, onUploadComplete }) {
         throw new Error(error || "Unknown upload error");
       }
 
-      // Insert metadata into Supabase
+      // 4. Insert metadata into Supabase
       const { error: dbError } = await supabase.from("videos").insert([
         {
           title,
@@ -56,6 +59,7 @@ export default function VideoUpload({ session, onUploadComplete }) {
         throw new Error(dbError.message);
       }
 
+      // 5. Reset form and notify
       setTitle("");
       setFile(null);
       alert("✅ Video uploaded successfully!");
