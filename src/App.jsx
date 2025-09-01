@@ -39,14 +39,20 @@ export default function App() {
     setDailyAffirmation(affirmations[index]);
 
     // Supabase session handling
-    const currentSession = supabase.auth.getSession();
-    currentSession.then(({ data: { session } }) => setSession(session));
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+    };
+
+    fetchSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      listener?.subscription?.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
