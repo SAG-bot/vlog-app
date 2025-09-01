@@ -43,11 +43,6 @@ export default function VideoList({ session }) {
     fetchVideos();
   }, []);
 
-  // Get public URL for video
-  const getPublicUrl = (path) => {
-    return supabase.storage.from("videos").getPublicUrl(path).data.publicUrl;
-  };
-
   // Like/unlike video
   const toggleLike = async (videoId) => {
     const video = videos.find((v) => v.id === videoId);
@@ -97,9 +92,8 @@ export default function VideoList({ session }) {
   };
 
   // Delete video (only if owner)
-  const deleteVideo = async (videoId, videoUrl) => {
+  const deleteVideo = async (videoId) => {
     await supabase.from("videos").delete().match({ id: videoId, user_id: userId });
-    await supabase.storage.from("videos").remove([videoUrl]);
     fetchVideos();
   };
 
@@ -113,7 +107,7 @@ export default function VideoList({ session }) {
         return (
           <div key={video.id} className="video-tile">
             <h3>{video.title}</h3>
-            <video src={getPublicUrl(video.video_url)} controls />
+            <video src={video.video_url} controls />
 
             {/* Like button */}
             <button onClick={() => toggleLike(video.id)} className="like-btn">
@@ -123,7 +117,7 @@ export default function VideoList({ session }) {
             {/* Delete video button (only for owner) */}
             {video.user_id === userId && (
               <button
-                onClick={() => deleteVideo(video.id, video.video_url)}
+                onClick={() => deleteVideo(video.id)}
                 className="delete-btn"
               >
                 🗑️ Delete Video
