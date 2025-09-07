@@ -1,47 +1,56 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg/dist/esm/ffmpeg.js";
 
+let createFFmpeg;
+let fetchFile;
+let ffmpegInstance;
 
-const ffmpeg = createFFmpeg({ log: true });
-const MAX_SIZE_MB = 50; // Supabase limit
+const MAX_SIZE_MB = 50;
 
 const VideoUpload = () => {
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [video, setVideo] = useState(null);
   const [compressed, setCompressed] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
-  const [uploadedUrl, setUploadedUrl] = useState(null);
+
+  // Load FFmpeg dynamically in the browser
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("@ffmpeg/ffmpeg").then((module) => {
+        createFFmpeg = module.createFFmpeg;
+        fetchFile = module.fetchFile;
+        ffmpegInstance = createFFmpeg({ log: true });
+        setFfmpegLoaded(true);
+      });
+    }
+  }, []);
 
   const handleFileChange = (e) => {
     setVideo(e.target.files[0]);
     setCompressed(null);
     setProgress(0);
     setStatusMessage("");
-    setUploadedUrl(null);
   };
 
   const compressVideo = async () => {
-    if (!video) return;
+    if (!video || !ffmpegLoaded) return;
+
     setUploading(true);
     setStatusMessage("Loading FFmpeg...");
+    await ffmpegInstance.load();
 
-    if (!ffmpeg.isLoaded()) await ffmpeg.load();
+    ffmpegInstance.setProgress(({ ratio }) => setProgress(Math.round(ratio * 50)));
 
-    ffmpeg.setProgress(({ ratio }) => {
-      setProgress(Math.round(ratio * 50)); // 0-50%
-    });
-
-    ffmpeg.FS("writeFile", video.name, await fetchFile(video));
+    ffmpegInstance.FS("writeFile", video.name, await fetchFile(video));
 
     setStatusMessage("Compressing video...");
-
-    let bitrate = 500; // kbps starting
+    let bitrate = 500;
     let compressedFile;
 
     while (true) {
-      await ffmpeg.run(
+      await ffmpegInstance.run(
         "-i",
         video.name,
         "-vf",
@@ -53,53 +62,41 @@ const VideoUpload = () => {
         "output.mp4"
       );
 
-      const data = ffmpeg.FS("readFile", "output.mp4");
-      compressedFile = new File([data.buffer], "compressed.mp4", {
-        type: "video/mp4",
-      });
+      const data = ffmpegInstance.FS("readFile", "output.mp4");
+      compressedFile = new File([data.buffer], "compressed.mp4", { type: "video/mp4" });
 
-      const sizeMB = compressedFile.size / 1024 / 1024;
-      if (sizeMB <= MAX_SIZE_MB || bitrate <= 100) break;
+      if (compressedFile.size / 1024 / 1024 <= MAX_SIZE_MB || bitrate <= 100) break;
 
-      bitrate = Math.floor(bitrate * 0.8); // reduce 20% if still too big
+      bitrate = Math.floor(bitrate * 0.8);
       setStatusMessage(`Compressing... adjusting bitrate to ${bitrate} kbps`);
     }
 
     setCompressed(compressedFile);
     setProgress(50);
-    setStatusMessage("Compression complete. Preparing to upload...");
+    setStatusMessage("Compression complete. Ready to upload...");
   };
 
   const uploadToSupabase = async () => {
     if (!compressed) return;
 
-    setStatusMessage("Uploading...");
     const filePath = `user-videos/${Date.now()}-${compressed.name}`;
-
-    const { data, error } = await supabase.storage
-      .from("videos")
-      .upload(filePath, compressed, {
-        onUploadProgress: (event) => {
-          const percent = 50 + Math.round((event.loaded / event.total) * 50); // 50-100%
-          setProgress(percent);
-        },
-      });
+    const { error } = await supabase.storage.from("videos").upload(filePath, compressed, {
+      onUploadProgress: (event) => {
+        setProgress(50 + Math.round((event.loaded / event.total) * 50));
+      },
+    });
 
     if (error) {
       console.error(error);
-      setStatusMessage("Upload failed.");
-      setUploading(false);
-      return;
+      setStatusMessage("Upload failed");
+    } else {
+      setStatusMessage("Upload successful!");
+      setProgress(100);
+      setVideo(null);
+      setCompressed(null);
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("videos")
-      .getPublicUrl(filePath);
-
-    setUploadedUrl(publicUrlData.publicUrl);
-    setStatusMessage("Upload successful!");
     setUploading(false);
-    setProgress(100);
   };
 
   const handleCompressAndUpload = async () => {
@@ -108,30 +105,19 @@ const VideoUpload = () => {
   };
 
   return (
-    <div className="p-4">
-      <h2 className="font-bold text-xl mb-2">Upload a Video</h2>
+    <div className="video-upload">
+      {!ffmpegLoaded && <p>Loading video engine...</p>}
 
       <input type="file" accept="video/*" onChange={handleFileChange} />
-
       <button
+        className="upload-btn"
         onClick={handleCompressAndUpload}
-        disabled={!video || uploading}
-        className="px-4 py-2 bg-blue-600 text-white rounded mt-3 disabled:opacity-50"
+        disabled={!video || uploading || !ffmpegLoaded}
       >
         {uploading ? "Processing..." : "Upload Video"}
       </button>
 
-      {statusMessage && <p className="mt-2 text-gray-700">{statusMessage}</p>}
-
-      {video && !compressed && (
-        <p className="text-sm mt-1">Original size: {(video.size / 1024 / 1024).toFixed(2)} MB</p>
-      )}
-
-      {compressed && (
-        <p className="text-sm mt-1">
-          Compressed size: {(compressed.size / 1024 / 1024).toFixed(2)} MB
-        </p>
-      )}
+      {statusMessage && <p>{statusMessage}</p>}
 
       {uploading && (
         <div className="w-full bg-gray-300 rounded h-4 mt-2">
@@ -139,14 +125,6 @@ const VideoUpload = () => {
             className="bg-blue-500 h-4 rounded"
             style={{ width: `${progress}%` }}
           ></div>
-        </div>
-      )}
-
-      {uploadedUrl && (
-        <div className="mt-4">
-          <h3 className="font-semibold">Uploaded Video:</h3>
-          <video controls src={uploadedUrl} className="w-full max-w-md" />
-          <p className="text-sm break-words">{uploadedUrl}</p>
         </div>
       )}
     </div>
