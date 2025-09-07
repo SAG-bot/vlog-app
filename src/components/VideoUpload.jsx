@@ -2,35 +2,41 @@ import React, { useState } from "react";
 import { supabase } from "./supabaseClient";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
 
-const ffmpeg = createFFmpeg({ log: false });
+const ffmpeg = createFFmpeg({ log: true });
 
 const VideoUpload = () => {
   const [video, setVideo] = useState(null);
   const [compressed, setCompressed] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState("");
   const [uploadedUrl, setUploadedUrl] = useState(null);
 
   const handleFileChange = (e) => {
     setVideo(e.target.files[0]);
+    setCompressed(null);
+    setProgress(0);
+    setStatusMessage("");
+    setUploadedUrl(null);
   };
 
-  const compressAndUpload = async () => {
+  const compressVideo = async () => {
     if (!video) return;
 
+    setStatusMessage("Loading FFmpeg...");
     setUploading(true);
-    setProgress("Loading encoder...");
 
     if (!ffmpeg.isLoaded()) {
       await ffmpeg.load();
     }
 
-    setProgress("Compressing... this may take a minute");
+    ffmpeg.setProgress(({ ratio }) => {
+      setProgress(Math.round(ratio * 50)); // compression progress 0-50%
+    });
 
-    // Write original file to ffmpeg memory
     ffmpeg.FS("writeFile", video.name, await fetchFile(video));
 
-    // Run ffmpeg: resize width to 640px, lower bitrate to ~500kbps
+    setStatusMessage("Compressing video...");
     await ffmpeg.run(
       "-i",
       video.name,
@@ -49,26 +55,46 @@ const VideoUpload = () => {
     });
 
     setCompressed(compressedFile);
+    setProgress(50); // compression done
+    setStatusMessage("Compression complete. Preparing to upload...");
+  };
 
-    // Upload to Supabase Storage
-    const filePath = `user-videos/${Date.now()}-${compressedFile.name}`;
-    const { data: uploadData, error } = await supabase.storage
-      .from("videos") // 🔑 your bucket name
-      .upload(filePath, compressedFile);
+  const uploadToSupabase = async () => {
+    if (!compressed) return;
+
+    setStatusMessage("Uploading...");
+    const filePath = `user-videos/${Date.now()}-${compressed.name}`;
+
+    // Monitor upload progress
+    const { data, error } = await supabase.storage
+      .from("videos")
+      .upload(filePath, compressed, {
+        onUploadProgress: (event) => {
+          const percent = 50 + Math.round((event.loaded / event.total) * 50); // 50-100%
+          setProgress(percent);
+        },
+      });
 
     if (error) {
       console.error(error);
-      setProgress("Upload failed");
-    } else {
-      // Get public URL
-      const { data: publicUrl } = supabase.storage
-        .from("videos")
-        .getPublicUrl(filePath);
-      setUploadedUrl(publicUrl.publicUrl);
-      setProgress("Upload successful!");
+      setStatusMessage("Upload failed.");
+      setUploading(false);
+      return;
     }
 
+    const { data: publicUrlData } = supabase.storage
+      .from("videos")
+      .getPublicUrl(filePath);
+
+    setUploadedUrl(publicUrlData.publicUrl);
+    setStatusMessage("Upload successful!");
     setUploading(false);
+    setProgress(100);
+  };
+
+  const handleCompressAndUpload = async () => {
+    await compressVideo();
+    await uploadToSupabase();
   };
 
   return (
@@ -78,19 +104,32 @@ const VideoUpload = () => {
       <input type="file" accept="video/*" onChange={handleFileChange} />
 
       <button
-        onClick={compressAndUpload}
+        onClick={handleCompressAndUpload}
         disabled={!video || uploading}
         className="px-4 py-2 bg-blue-600 text-white rounded mt-3 disabled:opacity-50"
       >
         {uploading ? "Processing..." : "Upload Video"}
       </button>
 
-      {progress && <p className="mt-2 text-gray-700">{progress}</p>}
+      {statusMessage && <p className="mt-2 text-gray-700">{statusMessage}</p>}
+
+      {video && !compressed && (
+        <p className="text-sm mt-1">Original size: {(video.size / 1024 / 1024).toFixed(2)} MB</p>
+      )}
 
       {compressed && (
-        <p className="mt-2 text-sm">
+        <p className="text-sm mt-1">
           Compressed size: {(compressed.size / 1024 / 1024).toFixed(2)} MB
         </p>
+      )}
+
+      {uploading && (
+        <div className="w-full bg-gray-300 rounded h-4 mt-2">
+          <div
+            className="bg-blue-500 h-4 rounded"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
       )}
 
       {uploadedUrl && (
