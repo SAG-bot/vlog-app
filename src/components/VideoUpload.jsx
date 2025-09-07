@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
 
 const ffmpeg = createFFmpeg({ log: true });
+const MAX_SIZE_MB = 50; // Supabase limit
 
 const VideoUpload = () => {
   const [video, setVideo] = useState(null);
@@ -22,40 +23,49 @@ const VideoUpload = () => {
 
   const compressVideo = async () => {
     if (!video) return;
-
-    setStatusMessage("Loading FFmpeg...");
     setUploading(true);
+    setStatusMessage("Loading FFmpeg...");
 
-    if (!ffmpeg.isLoaded()) {
-      await ffmpeg.load();
-    }
+    if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
     ffmpeg.setProgress(({ ratio }) => {
-      setProgress(Math.round(ratio * 50)); // compression progress 0-50%
+      setProgress(Math.round(ratio * 50)); // 0-50%
     });
 
     ffmpeg.FS("writeFile", video.name, await fetchFile(video));
 
     setStatusMessage("Compressing video...");
-    await ffmpeg.run(
-      "-i",
-      video.name,
-      "-vf",
-      "scale=640:-1",
-      "-b:v",
-      "500k",
-      "-preset",
-      "veryfast",
-      "output.mp4"
-    );
 
-    const data = ffmpeg.FS("readFile", "output.mp4");
-    const compressedFile = new File([data.buffer], "compressed.mp4", {
-      type: "video/mp4",
-    });
+    let bitrate = 500; // kbps starting
+    let compressedFile;
+
+    while (true) {
+      await ffmpeg.run(
+        "-i",
+        video.name,
+        "-vf",
+        "scale=640:-1",
+        "-b:v",
+        `${bitrate}k`,
+        "-preset",
+        "veryfast",
+        "output.mp4"
+      );
+
+      const data = ffmpeg.FS("readFile", "output.mp4");
+      compressedFile = new File([data.buffer], "compressed.mp4", {
+        type: "video/mp4",
+      });
+
+      const sizeMB = compressedFile.size / 1024 / 1024;
+      if (sizeMB <= MAX_SIZE_MB || bitrate <= 100) break;
+
+      bitrate = Math.floor(bitrate * 0.8); // reduce 20% if still too big
+      setStatusMessage(`Compressing... adjusting bitrate to ${bitrate} kbps`);
+    }
 
     setCompressed(compressedFile);
-    setProgress(50); // compression done
+    setProgress(50);
     setStatusMessage("Compression complete. Preparing to upload...");
   };
 
@@ -65,7 +75,6 @@ const VideoUpload = () => {
     setStatusMessage("Uploading...");
     const filePath = `user-videos/${Date.now()}-${compressed.name}`;
 
-    // Monitor upload progress
     const { data, error } = await supabase.storage
       .from("videos")
       .upload(filePath, compressed, {
