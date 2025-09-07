@@ -10,7 +10,9 @@
     "start": "vite"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.56.1",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@supabase/supabase-js": "^2.57.2",
     "googleapis": "^132.0.0",
     "lambda-multipart-parser": "^1.0.1",
     "react": "^18.2.0",
