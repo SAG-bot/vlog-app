@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
-import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
+import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg/dist/esm/ffmpeg.js";
+
 
 const ffmpeg = createFFmpeg({ log: true });
 const MAX_SIZE_MB = 50; // Supabase limit
